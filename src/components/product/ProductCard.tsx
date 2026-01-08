@@ -11,6 +11,7 @@ export interface Product {
   price: number;
   originalPrice?: number;
   image: string;
+  inStock?: boolean;
   badge?: "sale" | "new" | "soldout" | "bestseller";
   colors?: string[];
 }
@@ -33,6 +34,8 @@ export function ProductCard({ product, className }: ProductCardProps) {
   const discount = product.originalPrice
     ? Math.round((1 - product.price / product.originalPrice) * 100)
     : 0;
+  const isOutOfStock = product.inStock === false;
+  const displayBadge = isOutOfStock ? "soldout" : product.badge;
 
   return (
     <article className={cn("group product-card", className)}>
@@ -47,13 +50,13 @@ export function ProductCard({ product, className }: ProductCardProps) {
           />
           
           {/* Badge */}
-          {product.badge && (
+          {displayBadge && (
             <div className="absolute top-3 left-3">
-              <Badge variant={product.badge}>
-                {product.badge === "sale" && `${discount}% OFF`}
-                {product.badge === "new" && "New"}
-                {product.badge === "soldout" && "Sold Out"}
-                {product.badge === "bestseller" && "Best Seller"}
+              <Badge variant={displayBadge}>
+                {displayBadge === "sale" && `${discount}% OFF`}
+                {displayBadge === "new" && "New"}
+                {displayBadge === "soldout" && "Sold Out"}
+                {displayBadge === "bestseller" && "Best Seller"}
               </Badge>
             </div>
           )}
@@ -77,13 +80,13 @@ export function ProductCard({ product, className }: ProductCardProps) {
               variant="cart"
               size="sm"
               className="w-full"
-              disabled={product.badge === "soldout"}
+              disabled={isOutOfStock}
               onClick={(e) => {
                 e.preventDefault();
                 // Add to cart
               }}
             >
-              {product.badge === "soldout" ? "Habis" : "Tambah ke Keranjang"}
+              {isOutOfStock ? "Habis" : "Tambah ke Keranjang"}
             </Button>
           </div>
         </div>
@@ -103,6 +106,9 @@ export function ProductCard({ product, className }: ProductCardProps) {
               </span>
             )}
           </div>
+          <p className={cn("text-xs font-medium", isOutOfStock ? "text-destructive" : "text-emerald-600")}>
+            {isOutOfStock ? "Out of Stock" : "In Stock"}
+          </p>
           
           {/* Color Swatches */}
           {product.colors && product.colors.length > 0 && (

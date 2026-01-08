@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import { ProductCard, Product } from "@/components/product/ProductCard";
 import { Button } from "@/components/ui/button";
+import { cubicBezier, motion } from "framer-motion";
 
 import product1 from "@/assets/product-1.jpg";
 import product2 from "@/assets/product-2.jpg";
@@ -17,6 +18,7 @@ const products: Product[] = [
     originalPrice: 459000,
     image: product1,
     badge: "sale",
+    inStock: true,
     colors: ["#8B7355", "#F5E6D3", "#C4A77D"],
   },
   {
@@ -26,6 +28,7 @@ const products: Product[] = [
     price: 389000,
     image: product2,
     badge: "new",
+    inStock: true,
     colors: ["#8B9A6B", "#C4A77D", "#2F2F2F"],
   },
   {
@@ -36,6 +39,7 @@ const products: Product[] = [
     originalPrice: 439000,
     image: product3,
     badge: "bestseller",
+    inStock: false,
     colors: ["#D4A5A5", "#8B7355", "#F5E6D3"],
   },
   {
@@ -44,6 +48,7 @@ const products: Product[] = [
     slug: "embroidered-cream-elegant-dress",
     price: 549000,
     image: product4,
+    inStock: true,
     colors: ["#F5E6D3", "#E8D5C4"],
   },
 ];
@@ -67,6 +72,26 @@ export function ProductGrid({
     2: "grid-cols-2",
     3: "grid-cols-2 md:grid-cols-3",
     4: "grid-cols-2 md:grid-cols-3 lg:grid-cols-4",
+  };
+
+  const gridVariants = {
+    hidden: {},
+    visible: {
+      transition: {
+        staggerChildren: 0.12,
+        delayChildren: 0.05,
+      },
+    },
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 16, scale: 0.98 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      scale: 1,
+      transition: { duration: 0.45, ease: cubicBezier(0.16, 1, 0.3, 1) },
+    },
   };
 
   return (
@@ -99,15 +124,19 @@ export function ProductGrid({
         )}
 
         {/* Grid */}
-        <div className={`grid ${gridCols[columns]} gap-4 md:gap-6`}>
+        <motion.div
+          className={`grid ${gridCols[columns]} gap-4 md:gap-6`}
+          variants={gridVariants}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: false, amount: 0.25 }}
+        >
           {products.map((product) => (
-            <ProductCard
-              key={product.id}
-              product={product}
-              className="animate-fade-in"
-            />
+            <motion.div key={product.id} variants={itemVariants}>
+              <ProductCard product={product} />
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       </div>
     </section>
   );

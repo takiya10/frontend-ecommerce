@@ -1,8 +1,13 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import heroImage from "@/assets/hero-image.jpg";
+import lozyHero1 from "@/assets/lozy-hero-1.jpg";
+import lozyHero2 from "@/assets/lozy-hero-2.jpg";
+import lozyHero3 from "@/assets/lozy-hero-3.jpeg";
+import lozyHero4 from "@/assets/lozy-hero-4.jpeg";
 
 const slides = [
   {
@@ -14,7 +19,50 @@ const slides = [
     ctas: [
       { text: "Exclusive Discount 10% for All Items", highlight: "10%" },
       { text: "Best Seller Bundle up to 25%", highlight: "25%" },
-      { text: "Get Free Shipping on Selected Orders", highlight: "" },
+    ],
+  },
+  {
+    id: 2,
+    image: lozyHero1,
+    title: "Januari",
+    subtitle: "KICK-OFF",
+    highlight: "Sale",
+    ctas: [
+      { text: "Exclusive Discount 10% for All Items", highlight: "10%" },
+      { text: "Best Seller Bundle up to 25%", highlight: "25%" },
+    ],
+  },
+  {
+    id: 3,
+    image: lozyHero2,
+    title: "Januari",
+    subtitle: "KICK-OFF",
+    highlight: "Sale",
+    ctas: [
+      { text: "Exclusive Discount 10% for All Items", highlight: "10%" },
+      { text: "Best Seller Bundle up to 25%", highlight: "25%" },
+    ],
+  },
+  {
+    id: 4,
+    image: lozyHero3,
+    title: "Januari",
+    subtitle: "KICK-OFF",
+    highlight: "Sale",
+    ctas: [
+      { text: "Exclusive Discount 10% for All Items", highlight: "10%" },
+      { text: "Best Seller Bundle up to 25%", highlight: "25%" },
+    ],
+  },
+  {
+    id: 5,
+    image: lozyHero4,
+    title: "Januari",
+    subtitle: "KICK-OFF",
+    highlight: "Sale",
+    ctas: [
+      { text: "Exclusive Discount 10% for All Items", highlight: "10%" },
+      { text: "Best Seller Bundle up to 25%", highlight: "25%" },
     ],
   },
 ];
@@ -25,7 +73,7 @@ export function HeroSlider() {
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % slides.length);
-    }, 6000);
+    }, 20000);
     return () => clearInterval(timer);
   }, []);
 
@@ -43,11 +91,20 @@ export function HeroSlider() {
             currentSlide === index ? "opacity-100" : "opacity-0 pointer-events-none"
           )}
         >
-          <img
-            src={slide.image}
-            alt=""
-            className="absolute inset-0 w-full h-full object-cover object-top"
-          />
+          <AnimatePresence mode="wait">
+            {currentSlide === index && (
+              <motion.img
+                key={slide.id}
+                src={slide.image}
+                alt={slide.title}
+                className="absolute inset-0 w-full h-full object-cover object-top"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
+              />
+            )}
+          </AnimatePresence>
           {/* Gradient overlay for text readability */}
           <div className="absolute inset-0 bg-gradient-to-r from-background/80 via-background/40 to-transparent" />
           
@@ -63,7 +120,7 @@ export function HeroSlider() {
                   {slide.highlight}
                 </span>
               </h1>
-              <p className="text-xl text-muted-foreground mt-2 font-serif tracking-widest">LOZY</p>
+              <p className="text-xl text-muted-foreground mt-2 font-serif tracking-widest">Byher</p>
               
               {/* CTAs */}
               <div className="mt-8 space-y-3">

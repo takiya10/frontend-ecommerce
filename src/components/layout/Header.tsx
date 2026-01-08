@@ -1,22 +1,31 @@
-import { ShoppingBag, Search, User, Menu, X, Heart } from "lucide-react";
+import { ShoppingBag, Search, User, Menu, X, Heart, ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useEffect } from "react";
+import logoImage from "@/assets/logo.png";
 
 const navLinks = [
-  { label: "Best Seller", href: "/collections/best-seller" },
-  { label: "New Arrival", href: "/collections/new-arrival" },
-  { label: "Hijab", href: "/collections/hijab" },
-  { label: "Outfit", href: "/collections/outfit" },
-  { label: "Prayer Set", href: "/collections/prayer-set" },
-  { label: "Accessories", href: "/collections/accessories" },
-  { label: "Sale", href: "/collections/sale" },
+  { label: "Home", href: "/" },
+  { label: "Shop", href: "/collections/all" },
+  { label: "Journal", href: "/journal" },
+  { label: "Store Location", href: "/store-location" },
 ];
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [cartCount] = useState(0);
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [mobileMenuOpen]);
 
   return (
     <header className="sticky top-0 z-50">
@@ -45,8 +54,8 @@ export function Header() {
               <Menu className="h-6 w-6" />
             </Button>
 
-            <Link to="/" className="font-serif text-2xl font-semibold text-nav-foreground tracking-widest">
-              LOZY
+            <Link to="/" className="flex items-center">
+              <img src={logoImage} alt="Byher" className="h-10 brightness-0 invert" />
             </Link>
 
             <div className="flex items-center gap-2">
@@ -66,8 +75,8 @@ export function Header() {
 
           {/* Desktop Header */}
           <div className="hidden lg:flex items-center justify-between h-14">
-            <Link to="/" className="font-serif text-2xl font-semibold text-nav-foreground tracking-widest">
-              LOZY
+            <Link to="/" className="flex items-center">
+              <img src={logoImage} alt="Byher" className="h-12 brightness-0 invert" />
             </Link>
 
             <div className="flex items-center gap-1">
@@ -119,24 +128,26 @@ export function Header() {
           mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        <div className="flex items-center justify-between p-4 border-b border-border">
-          <span className="font-serif text-xl font-semibold tracking-widest">LOZY</span>
-          <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(false)}>
-            <X className="h-5 w-5" />
-          </Button>
+        <div className="flex h-full flex-col">
+          <div className="flex items-center justify-between p-4 border-b border-border">
+            <img src={logoImage} alt="Byher" className="h-10 brightness-0 invert" />
+            <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(false)}>
+              <X className="h-5 w-5" />
+            </Button>
+          </div>
+          <nav className="flex-1 overflow-y-auto p-4 space-y-1">
+            {navLinks.map((link) => (
+              <Link
+                key={link.href}
+                to={link.href}
+                className="block py-3 px-4 text-foreground font-medium hover:bg-accent rounded-md transition-colors"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                {link.label}
+              </Link>
+            ))}
+          </nav>
         </div>
-        <nav className="p-4 space-y-1">
-          {navLinks.map((link) => (
-            <Link
-              key={link.href}
-              to={link.href}
-              className="block py-3 px-4 text-foreground font-medium hover:bg-accent rounded-md transition-colors"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              {link.label}
-            </Link>
-          ))}
-        </nav>
       </div>
     </header>
   );
