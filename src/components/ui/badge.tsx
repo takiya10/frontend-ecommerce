@@ -12,12 +12,18 @@ const badgeVariants = cva(
         secondary: "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
         destructive: "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80",
         outline: "text-foreground",
+        // Fashion e-commerce variants
+        sale: "border-transparent bg-sale text-sale-foreground shadow-sm",
+        new: "border-transparent bg-warm-brown text-primary-foreground shadow-sm",
+        soldout: "border-transparent bg-muted text-muted-foreground",
+        promo: "border-transparent bg-dusty-pink text-warm-brown",
+        bestseller: "border-transparent bg-gold text-warm-brown shadow-sm",
       },
     },
     defaultVariants: {
       variant: "default",
     },
-  },
+  }
 );
 
 export interface BadgeProps extends React.HTMLAttributes<HTMLDivElement>, VariantProps<typeof badgeVariants> {}
