@@ -1,4 +1,4 @@
-import { ShoppingBag, Search, User, Menu, X, Heart, ChevronRight, Calculator, Calendar, CreditCard, Settings, Smile } from "lucide-react";
+import { ShoppingBag, Search, User, Menu, X, Heart, ChevronRight, Calculator, Calendar, CreditCard, Settings, Smile, LogOut } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import logoImage from "@/assets/logo.png";
 import { useCart } from "@/contexts/CartContext";
 import { useWishlist } from "@/contexts/WishlistContext";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   CommandDialog,
   CommandEmpty,
@@ -15,6 +16,14 @@ import {
   CommandList,
   CommandSeparator,
 } from "@/components/ui/command";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 import product1 from "@/assets/product-1.jpg";
 import product2 from "@/assets/product-2.jpg";
@@ -72,6 +81,7 @@ export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { cartCount } = useCart();
   const { wishlistCount } = useWishlist();
+  const { user, isAuthenticated, logout } = useAuth();
   const [openSearch, setOpenSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
@@ -101,6 +111,11 @@ export function Header() {
   const runCommand = (command: () => void) => {
     setOpenSearch(false);
     command();
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
   };
 
   return (
@@ -181,11 +196,40 @@ export function Header() {
               >
                 <Search className="h-5 w-5" />
               </Button>
-              <Link to="/login">
-                <Button variant="icon" size="icon" className="text-nav-foreground">
-                  <User className="h-5 w-5" />
-                </Button>
-              </Link>
+
+              {isAuthenticated ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="icon" size="icon" className="text-nav-foreground">
+                      <User className="h-5 w-5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                    <DropdownMenuItem disabled>
+                      {user?.name || user?.email}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => navigate("/profile")}>
+                      Profile
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate("/orders")}>
+                      Orders
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleLogout} className="text-red-500">
+                      Logout
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <Link to="/login">
+                  <Button variant="icon" size="icon" className="text-nav-foreground">
+                    <User className="h-5 w-5" />
+                  </Button>
+                </Link>
+              )}
+
               <Link to="/wishlist">
                 <Button variant="icon" size="icon" className="text-nav-foreground relative">
                   <Heart className="h-5 w-5" />
@@ -210,6 +254,7 @@ export function Header() {
           </div>
         </div>
       </nav>
+
 
       {/* Search Command Dialog */}
       <CommandDialog open={openSearch} onOpenChange={setOpenSearch}>
@@ -312,14 +357,38 @@ export function Header() {
                   </span>
                 )}
               </Link>
-               <Link
-                to="/login"
-                className="flex items-center py-3 px-4 text-foreground font-medium hover:bg-accent rounded-md transition-colors"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                <User className="mr-2 h-5 w-5" />
-                Masuk
-              </Link>
+              
+              {isAuthenticated ? (
+                <>
+                  <Link
+                    to="/profile"
+                    className="flex items-center py-3 px-4 text-foreground font-medium hover:bg-accent rounded-md transition-colors"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <User className="mr-2 h-5 w-5" />
+                    Profile
+                  </Link>
+                  <button
+                    className="w-full flex items-center py-3 px-4 text-red-500 font-medium hover:bg-accent rounded-md transition-colors text-left"
+                    onClick={() => {
+                      handleLogout();
+                      setMobileMenuOpen(false);
+                    }}
+                  >
+                    <LogOut className="mr-2 h-5 w-5" />
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <Link
+                  to="/login"
+                  className="flex items-center py-3 px-4 text-foreground font-medium hover:bg-accent rounded-md transition-colors"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <User className="mr-2 h-5 w-5" />
+                  Masuk
+                </Link>
+              )}
             </div>
           </nav>
         </div>

@@ -1,57 +1,19 @@
 import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
-import { ProductCard, Product } from "@/components/product/ProductCard";
+import { ProductCard } from "@/components/product/ProductCard";
 import { Button } from "@/components/ui/button";
 import { cubicBezier, motion } from "framer-motion";
+import { useQuery } from "@tanstack/react-query";
+import { fetcher } from "@/lib/api-client";
+import { Skeleton } from "@/components/ui/skeleton";
 
+// Fallback images (since backend doesn't serve images yet)
 import product1 from "@/assets/product-1.jpg";
 import product2 from "@/assets/product-2.jpg";
 import product3 from "@/assets/product-3.jpg";
 import product4 from "@/assets/product-4.jpg";
 
-const products: Product[] = [
-  {
-    id: "1",
-    name: "Floure Embroidery Set Dessert Taupe L-XL Series",
-    slug: "floure-embroidery-set-dessert-taupe",
-    price: 429000,
-    originalPrice: 459000,
-    image: product1,
-    badge: "sale",
-    inStock: true,
-    colors: ["#8B7355", "#F5E6D3", "#C4A77D"],
-  },
-  {
-    id: "2",
-    name: "Sage Piping Dress with Belt",
-    slug: "sage-piping-dress",
-    price: 389000,
-    image: product2,
-    badge: "new",
-    inStock: true,
-    colors: ["#8B9A6B", "#C4A77D", "#2F2F2F"],
-  },
-  {
-    id: "3",
-    name: "Dusty Rose Modest Set",
-    slug: "dusty-rose-modest-set",
-    price: 419000,
-    originalPrice: 439000,
-    image: product3,
-    badge: "bestseller",
-    inStock: false,
-    colors: ["#D4A5A5", "#8B7355", "#F5E6D3"],
-  },
-  {
-    id: "4",
-    name: "Embroidered Cream Elegant Dress",
-    slug: "embroidered-cream-elegant-dress",
-    price: 549000,
-    image: product4,
-    inStock: true,
-    colors: ["#F5E6D3", "#E8D5C4"],
-  },
-];
+const PLACEHOLDER_IMAGES = [product1, product2, product3, product4];
 
 interface ProductGridProps {
   title?: string;
@@ -68,6 +30,11 @@ export function ProductGrid({
   viewAllHref = "/collections/all",
   columns = 4,
 }: ProductGridProps) {
+  const { data: products, isLoading } = useQuery({
+    queryKey: ['products', 'featured'],
+    queryFn: () => fetcher<any[]>('/products?sort=newest'),
+  });
+
   const gridCols = {
     2: "grid-cols-2",
     3: "grid-cols-2 md:grid-cols-3",
@@ -93,6 +60,20 @@ export function ProductGrid({
       transition: { duration: 0.45, ease: cubicBezier(0.16, 1, 0.3, 1) },
     },
   };
+
+  if (isLoading) {
+    return (
+      <section className="py-12 lg:py-16">
+        <div className="container mx-auto">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+             {[1,2,3,4].map(i => <Skeleton key={i} className="aspect-[3/4] rounded-lg" />)}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  const displayProducts = products?.slice(0, 4) || [];
 
   return (
     <section className="py-12 lg:py-16">
@@ -131,9 +112,15 @@ export function ProductGrid({
           whileInView="visible"
           viewport={{ once: false, amount: 0.25 }}
         >
-          {products.map((product) => (
+          {displayProducts.map((product, index) => (
             <motion.div key={product.id} variants={itemVariants}>
-              <ProductCard product={product} />
+              <ProductCard product={{
+                ...product,
+                image: PLACEHOLDER_IMAGES[index % 4], // Fallback image
+                originalPrice: product.price * 1.1, // Fake original price for demo
+                inStock: product.stock > 0,
+                colors: ["#8B7355", "#F5E6D3"] // Fake colors
+              }} />
             </motion.div>
           ))}
         </motion.div>

@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Register() {
   const [isLoading, setIsLoading] = useState(false);
@@ -19,6 +20,7 @@ export default function Register() {
     confirmPassword: "",
   });
   const navigate = useNavigate();
+  const { register } = useAuth();
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,12 +32,19 @@ export default function Register() {
 
     setIsLoading(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
-      toast.success("Pendaftaran berhasil! Silakan login.");
+    try {
+      await register({
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+      });
+      // Redirect to login after successful registration
       navigate("/login");
-    }, 1500);
+    } catch (error) {
+       // Error is handled in AuthContext
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

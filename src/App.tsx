@@ -16,12 +16,15 @@ import Wishlist from "./pages/Wishlist";
 import NotFound from "./pages/NotFound";
 import StaticPage from "./pages/StaticPage";
 
+import { AuthProvider } from "@/contexts/AuthContext";
+
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <CartProvider>
-      <WishlistProvider>
+    <AuthProvider>
+      <CartProvider>
+        <WishlistProvider>
         <TooltipProvider>
           <Toaster />
           <Sonner />
@@ -42,7 +45,8 @@ const App = () => (
           </BrowserRouter>
         </TooltipProvider>
       </WishlistProvider>
-    </CartProvider>
+      </CartProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 
