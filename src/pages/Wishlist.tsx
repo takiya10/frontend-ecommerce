@@ -3,7 +3,7 @@ import { Trash2, ShoppingBag, Heart } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
-import { formatPrice } from "@/components/product/ProductCard";
+import { formatPrice, cn } from "@/lib/utils";
 import { useWishlist } from "@/contexts/WishlistContext";
 
 export default function Wishlist() {

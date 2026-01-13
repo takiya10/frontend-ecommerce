@@ -5,7 +5,7 @@ import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { formatPrice } from "@/components/product/ProductCard";
+import { formatPrice } from "@/lib/utils";
 import { toast } from "sonner";
 import { useCart } from "@/contexts/CartContext";
 

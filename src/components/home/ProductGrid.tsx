@@ -6,6 +6,7 @@ import { cubicBezier, motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { fetcher } from "@/lib/api-client";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Product } from "@/types";
 
 // Fallback images (since backend doesn't serve images yet)
 import product1 from "@/assets/product-1.jpg";
@@ -30,9 +31,12 @@ export function ProductGrid({
   viewAllHref = "/collections/all",
   columns = 4,
 }: ProductGridProps) {
+  // Determine query based on viewAllHref
+  const collectionSlug = viewAllHref.split('/').pop() || 'all';
+  
   const { data: products, isLoading } = useQuery({
-    queryKey: ['products', 'featured'],
-    queryFn: () => fetcher<any[]>('/products?sort=newest'),
+    queryKey: ['products', 'grid', collectionSlug],
+    queryFn: () => fetcher<Product[]>(`/products?category=${collectionSlug}&sort=${collectionSlug === 'new-arrival' ? 'newest' : 'featured'}`),
   });
 
   const gridCols = {
@@ -119,7 +123,10 @@ export function ProductGrid({
                 image: PLACEHOLDER_IMAGES[index % 4], // Fallback image
                 originalPrice: product.price * 1.1, // Fake original price for demo
                 inStock: product.stock > 0,
-                colors: ["#8B7355", "#F5E6D3"] // Fake colors
+                colors: [
+                  { name: "Dessert Taupe", hex: "#8B7355" }, 
+                  { name: "Cream", hex: "#F5E6D3" }
+                ] // Correct ProductColor format
               }} />
             </motion.div>
           ))}

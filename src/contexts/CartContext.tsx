@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { fetcher } from "@/lib/api-client";
+import { Product } from "@/types";
 
 import product1 from "@/assets/product-1.jpg";
 
@@ -17,9 +18,24 @@ export interface CartItem {
   quantity: number;
 }
 
+interface BackendCartItem {
+  id: string;
+  productId: string;
+  quantity: number;
+  size: string | null;
+  color: string | null;
+  product: Product;
+}
+
+interface BackendCart {
+  id: string;
+  userId: string;
+  items: BackendCartItem[];
+}
+
 interface CartContextType {
   items: CartItem[];
-  addItem: (item: Omit<CartItem, "quantity" | "id"> & { id?: string }) => Promise<void>;
+  addItem: (item: Omit<CartItem, "quantity" | "id"> & { id?: string; quantity?: number }) => Promise<void>;
   removeItem: (id: string) => Promise<void>;
   updateQuantity: (id: string, quantity: number) => Promise<void>;
   clearCart: () => Promise<void>;
@@ -47,56 +63,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }, [isAuthenticated]);
 
-  // Sync with Backend when Authenticated (Merge Local Cart)
-  useEffect(() => {
-      const syncLocalCart = async () => {
-          if (isAuthenticated) {
-              const savedCart = localStorage.getItem("cart");
-              if (savedCart) {
-                  try {
-                      const localItems: CartItem[] = JSON.parse(savedCart);
-                      if (localItems.length > 0) {
-                          // Push local items to backend
-                          // We use Promise.all to do it in parallel
-                          await Promise.all(localItems.map(item => 
-                              fetcher('/cart/items', {
-                                  method: 'POST',
-                                  body: JSON.stringify({
-                                      productId: item.productId || item.id, // Handle fallback ID
-                                      quantity: item.quantity,
-                                      size: item.size,
-                                      color: item.color
-                                  })
-                              })
-                          ));
-                          
-                          // Clear local storage after successful merge
-                          localStorage.removeItem("cart");
-                          toast.success("Keranjang belanja disinkronisasi");
-                      }
-                  } catch (e) {
-                      console.error("Failed to sync cart", e);
-                  }
-              }
-              // Always fetch the final state from backend
-              fetchCart();
-          }
-      };
-
-      syncLocalCart();
-  }, [isAuthenticated]);
-
-  // Save to local storage whenever items change (ONLY if not authenticated)
-  useEffect(() => {
-    if (!isAuthenticated) {
-        localStorage.setItem("cart", JSON.stringify(items));
-    }
-  }, [items, isAuthenticated]);
-
   const fetchCart = async () => {
       try {
-          const cart = await fetcher<any>('/cart');
-          const mappedItems: CartItem[] = cart.items.map((item: any) => ({
+          const cart = await fetcher<BackendCart>('/cart');
+          const mappedItems: CartItem[] = cart.items.map((item) => ({
               id: item.id, // CartItem ID
               productId: item.productId,
               name: item.product.name,
@@ -113,15 +83,59 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }
   };
 
-  const addItem = async (newItem: Omit<CartItem, "quantity" | "id"> & { id?: string }) => {
+  // Sync with Backend when Authenticated (Merge Local Cart)
+  useEffect(() => {
+      const syncLocalCart = async () => {
+          if (isAuthenticated) {
+              const savedCart = localStorage.getItem("cart");
+              if (savedCart) {
+                  try {
+                      const localItems: CartItem[] = JSON.parse(savedCart);
+                      if (localItems.length > 0) {
+                          // Push local items to backend
+                          await Promise.all(localItems.map(item => 
+                              fetcher('/cart/items', {
+                                  method: 'POST',
+                                  body: JSON.stringify({
+                                      productId: item.productId || item.id, 
+                                      quantity: item.quantity,
+                                      size: item.size,
+                                      color: item.color
+                                  })
+                              })
+                          ));
+                          localStorage.removeItem("cart");
+                          toast.success("Keranjang belanja disinkronisasi");
+                      }
+                  } catch (e) {
+                      console.error("Failed to sync cart", e);
+                  }
+              }
+              void fetchCart();
+          }
+      };
+
+      void syncLocalCart();
+  }, [isAuthenticated]);
+
+  // Save to local storage whenever items change (ONLY if not authenticated)
+  useEffect(() => {
+    if (!isAuthenticated) {
+        localStorage.setItem("cart", JSON.stringify(items));
+    }
+  }, [items, isAuthenticated]);
+
+  const addItem = async (newItem: Omit<CartItem, "quantity" | "id"> & { id?: string; quantity?: number }) => {
+    const qtyToAdd = newItem.quantity || 1;
+
     // If Authenticated -> API
     if (isAuthenticated) {
         try {
-            await fetcher('/cart/items', {
+            await fetcher<BackendCartItem>('/cart/items', {
                 method: 'POST',
                 body: JSON.stringify({
-                    productId: newItem.productId || newItem.id, // Handle both props for compatibility
-                    quantity: 1,
+                    productId: newItem.productId || newItem.id, 
+                    quantity: qtyToAdd,
                     size: newItem.size,
                     color: newItem.color
                 })
@@ -137,7 +151,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
     // Local Logic
     setItems((currentItems) => {
-      const productId = newItem.productId || newItem.id; // Compatibility
+      const productId = newItem.productId || newItem.id; 
       const existingItem = currentItems.find(
         (item) => item.productId === productId && item.size === newItem.size && item.color === newItem.color
       );
@@ -146,7 +160,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         toast.success("Jumlah produk diperbarui di keranjang");
         return currentItems.map((item) =>
           item.productId === productId && item.size === newItem.size && item.color === newItem.color
-            ? { ...item, quantity: item.quantity + 1 }
+            ? { ...item, quantity: item.quantity + qtyToAdd }
             : item
         );
       }
@@ -154,9 +168,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       toast.success("Produk ditambahkan ke keranjang");
       return [...currentItems, { 
           ...newItem, 
-          id: `local-${Date.now()}`, // Temporary ID for local items
-          productId: productId!, // Ensure productId is set
-          quantity: 1 
+          id: `local-${Date.now()}`, 
+          productId: productId!, 
+          quantity: qtyToAdd 
       }];
     });
   };

@@ -2,13 +2,14 @@ import { ShoppingBag, Search, User, Menu, X, Heart, ChevronRight, Calculator, Ca
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { cn, formatPrice } from "@/lib/utils";
 import logoImage from "@/assets/logo.png";
 import { useCart } from "@/contexts/CartContext";
 import { useWishlist } from "@/contexts/WishlistContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { fetcher } from "@/lib/api-client";
+import { Product } from "@/types";
 import {
   CommandDialog,
   CommandEmpty,
@@ -28,14 +29,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 import product1 from "@/assets/product-1.jpg";
-
-const formatPrice = (price: number) => {
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    minimumFractionDigits: 0,
-  }).format(price);
-};
 
 const navLinks = [
   { label: "Home", href: "/" },
@@ -65,7 +58,7 @@ export function Header() {
   // Fetch search results
   const { data: searchResults, isLoading: isSearching } = useQuery({
     queryKey: ['search', debouncedSearch],
-    queryFn: () => fetcher<any[]>(`/products?search=${debouncedSearch}`),
+    queryFn: () => fetcher<Product[]>(`/products?search=${debouncedSearch}`),
     enabled: debouncedSearch.length > 0,
   });
 
@@ -259,14 +252,16 @@ export function Header() {
           {searchResults && searchResults.length > 0 && (
             <CommandGroup heading="Produk">
               {searchResults.map((product) => (
-                <CommandItem 
-                  key={product.id} 
-                  value={product.name}
-                  onSelect={() => runCommand(() => navigate(`/products/${product.slug}`))}
-                  className="flex items-center gap-3 p-2 cursor-pointer"
+                <div 
+                  key={product.id}
+                  onClick={() => {
+                    console.log("Header Search: Clicked product", product.slug);
+                    runCommand(() => navigate(`/products/${product.slug}`));
+                  }}
+                  className="flex items-center gap-3 p-2 cursor-pointer hover:bg-accent rounded-sm transition-colors"
                 >
                   <img 
-                    src={product.images?.[0]?.url || product1} // Fallback image
+                    src={product.images?.[0]?.url || product1} 
                     alt={product.name} 
                     className="w-10 h-12 object-cover rounded shadow-sm"
                   />
@@ -274,7 +269,7 @@ export function Header() {
                     <span className="font-medium text-sm line-clamp-1">{product.name}</span>
                     <span className="text-xs text-muted-foreground">{formatPrice(product.price)}</span>
                   </div>
-                </CommandItem>
+                </div>
               ))}
             </CommandGroup>
           )}

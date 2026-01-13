@@ -1,12 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { ChevronRight, Minus, Plus, Heart, Share2, Truck, RotateCcw, Shield } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { formatPrice } from "@/components/product/ProductCard";
-import { ProductGrid } from "@/components/home/ProductGrid";
+import { formatPrice } from "@/lib/utils";
 import { toast } from "sonner";
 import { useCart } from "@/contexts/CartContext";
 import { useWishlist } from "@/contexts/WishlistContext";
@@ -14,6 +13,8 @@ import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { fetcher } from "@/lib/api-client";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Product, ProductColor, ProductImage } from "@/types";
+import { ProductCard } from "@/components/product/ProductCard";
 
 import product1 from "@/assets/product-1.jpg";
 import product2 from "@/assets/product-2.jpg";
@@ -28,38 +29,118 @@ export default function ProductDetail() {
   
   const { data: fetchedProduct, isLoading, error } = useQuery({
     queryKey: ['product', slug],
-    queryFn: () => fetcher<any>(`/products/${slug}`),
+    queryFn: () => fetcher<Product>(`/products/${slug}`),
+    enabled: !!slug,
+    retry: 1,
+  });
+
+  const { data: relatedProducts } = useQuery({
+    queryKey: ['products', 'related', slug],
+    queryFn: () => fetcher<Product[]>(`/products/related/${slug}`),
     enabled: !!slug,
   });
 
-  const product = fetchedProduct ? {
-    ...fetchedProduct,
-    images: fetchedProduct.images && fetchedProduct.images.length > 0 
-        ? fetchedProduct.images.map((img: any) => img.url) 
-        : PLACEHOLDER_IMAGES,
-    colors: [
-       { name: "Default", hex: "#8B7355" }, // Dummy colors until backend has them
-       { name: "Variant 2", hex: "#F5E6D3" }
-    ],
-    sizes: ["S", "M", "L", "XL"], // Dummy sizes until backend has them
-    originalPrice: fetchedProduct.price * 1.1, // Dummy original price
-    badge: "new"
-  } : null;
+  const product = useMemo<Product | null>(() => {
+    if (!fetchedProduct) return null;
+    
+    const transformedImages = (fetchedProduct.images && Array.isArray(fetchedProduct.images) && fetchedProduct.images.length > 0)
+      ? fetchedProduct.images.map((img: string | ProductImage) => typeof img === 'string' ? img : img.url).filter(Boolean)
+      : PLACEHOLDER_IMAGES;
+
+    return {
+      ...fetchedProduct,
+      images: transformedImages as unknown as ProductImage[], // Temporary cast to match Product interface
+      colors: (fetchedProduct.colors && fetchedProduct.colors.length > 0)
+         ? fetchedProduct.colors
+         : [
+            { name: "Default", hex: "#8B7355" },
+            { name: "Cream", hex: "#F5E6D3" }
+         ],
+      sizes: (fetchedProduct.sizes && fetchedProduct.sizes.length > 0)
+         ? fetchedProduct.sizes
+         : ["S", "M", "L", "XL"],
+      originalPrice: (fetchedProduct.price || 0) * 1.1,
+      badge: "new"
+    } as Product;
+  }, [fetchedProduct]);
 
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
-  const [selectedColor, setSelectedColor] = useState(product?.colors?.[0] || { name: "Default", hex: "#8B7355" });
+  const [selectedColor, setSelectedColor] = useState<ProductColor | null>(null);
   const [quantity, setQuantity] = useState(1);
 
-  // Reset state when product changes
+  // Reset local state when product changes
   useEffect(() => {
     if (product) {
-      setSelectedColor(product.colors[0]);
+      setSelectedColor(product.colors?.[0] || null);
       setSelectedSize(null);
       setQuantity(1);
       setSelectedImage(0);
     }
-  }, [product?.id]);
+  }, [product]);
+
+  const discount = useMemo(() => {
+    if (!product?.originalPrice || !product?.price) return 0;
+    return Math.round((1 - product.price / product.originalPrice) * 100);
+  }, [product?.price, product?.originalPrice]);
+
+  const inWishlist = product ? isInWishlist(product.id) : false;
+
+  const handleToggleWishlist = () => {
+    if (!product) return;
+    if (inWishlist) {
+      removeFromWishlist(product.id);
+    } else {
+      addToWishlist({
+        id: product.id,
+        name: product.name,
+        slug: product.slug,
+        price: product.price,
+        image: typeof product.images?.[0] === 'string' ? (product.images[0] as string) : (product.images?.[0] as unknown as ProductImage)?.url || PLACEHOLDER_IMAGES[0],
+        inStock: (product.stock || 0) > 0,
+      });
+    }
+  };
+
+  const handleAddToCart = () => {
+    if (!product) return;
+    if (!selectedSize) {
+      toast.error("Silakan pilih ukuran terlebih dahulu");
+      return;
+    }
+
+    addItem({
+        productId: product.id,
+        name: product.name,
+        slug: product.slug,
+        price: product.price,
+        image: typeof product.images?.[0] === 'string' ? (product.images[0] as string) : (product.images?.[0] as unknown as ProductImage)?.url || PLACEHOLDER_IMAGES[0],
+        size: selectedSize,
+        color: selectedColor?.name || "Default",
+        quantity: quantity
+    });
+  };
+
+  const handleBuyNow = () => {
+    if (!product) return;
+    if (!selectedSize) {
+      toast.error("Silakan pilih ukuran terlebih dahulu");
+      return;
+    }
+    
+    addItem({
+        productId: product.id,
+        name: product.name,
+        slug: product.slug,
+        price: product.price,
+        image: typeof product.images?.[0] === 'string' ? (product.images[0] as string) : (product.images?.[0] as unknown as ProductImage)?.url || PLACEHOLDER_IMAGES[0],
+        size: selectedSize,
+        color: selectedColor?.name || "Default",
+        quantity: quantity
+    });
+    
+    navigate("/checkout");
+  };
 
   if (isLoading) {
     return (
@@ -75,6 +156,7 @@ export default function ProductDetail() {
             </div>
           </div>
         </main>
+        <Footer />
       </div>
     );
   }
@@ -83,79 +165,20 @@ export default function ProductDetail() {
     return (
        <div className="min-h-screen flex flex-col">
         <Header />
-        <main className="flex-1 container mx-auto py-12 text-center">
+        <main className="flex-1 container mx-auto py-12 text-center px-4">
           <h2 className="text-2xl font-bold text-red-500">Produk tidak ditemukan</h2>
+          <p className="text-muted-foreground mt-2">Maaf, produk yang Anda cari tidak tersedia atau telah dihapus.</p>
           <Link to="/">
-             <Button className="mt-4">Kembali ke Beranda</Button>
+             <Button className="mt-6">Kembali ke Beranda</Button>
           </Link>
         </main>
+        <Footer />
       </div>
     );
   }
 
-  const discount = product.originalPrice
-    ? Math.round((1 - product.price / product.originalPrice) * 100)
-    : 0;
-
-  const inWishlist = isInWishlist(product.id);
-
-  const handleToggleWishlist = () => {
-    if (inWishlist) {
-      removeFromWishlist(product.id);
-    } else {
-      addToWishlist({
-        id: product.id,
-        name: product.name,
-        slug: product.slug,
-        price: product.price,
-        image: product.images[0],
-        inStock: product.stock > 0,
-      });
-    }
-  };
-
-  const handleAddToCart = () => {
-    if (!selectedSize) {
-      toast.error("Silakan pilih ukuran terlebih dahulu");
-      return;
-    }
-
-    // Loop quantity times to add correct amount
-    for(let i=0; i<quantity; i++) {
-        addItem({
-            id: product.id,
-            name: product.name,
-            slug: product.slug,
-            price: product.price,
-            image: product.images[0],
-            size: selectedSize,
-            color: selectedColor.name
-        });
-    }
-  };
-
-  const handleBuyNow = () => {
-    if (!selectedSize) {
-      toast.error("Silakan pilih ukuran terlebih dahulu");
-      return;
-    }
-    
-    // Add to cart then navigate
-    addItem({
-        id: product.id,
-        name: product.name,
-        slug: product.slug,
-        price: product.price,
-        image: product.images[0],
-        size: selectedSize,
-        color: selectedColor.name
-    });
-    
-    navigate("/checkout");
-  };
-
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col" key={slug}>
       <Header />
 
       <main className="flex-1">
@@ -180,11 +203,13 @@ export default function ProductDetail() {
             {/* Images */}
             <div className="space-y-4">
               <div className="aspect-[3/4] rounded-lg overflow-hidden bg-muted relative">
-                <img
-                  src={product.images[selectedImage]}
-                  alt={product.name}
-                  className="w-full h-full object-cover"
-                />
+                {product.images && product.images[selectedImage] && (
+                  <img
+                    src={typeof product.images[selectedImage] === 'string' ? (product.images[selectedImage] as string) : (product.images[selectedImage] as unknown as ProductImage).url}
+                    alt={product.name}
+                    className="product-card-image w-full h-full object-cover"
+                  />
+                )}
                 {product.badge && (
                   <Badge variant={product.badge} className="absolute top-4 left-4">
                     {discount}% OFF
@@ -192,7 +217,7 @@ export default function ProductDetail() {
                 )}
               </div>
               <div className="flex gap-3 overflow-x-auto pb-2">
-                {product.images.map((img: string, i: number) => (
+                {product.images?.map((img: string | ProductImage, i: number) => (
                   <button
                     key={i}
                     onClick={() => setSelectedImage(i)}
@@ -200,7 +225,7 @@ export default function ProductDetail() {
                       selectedImage === i ? "border-primary" : "border-transparent"
                     }`}
                   >
-                    <img src={img} alt="" className="w-full h-full object-cover" />
+                    <img src={typeof img === 'string' ? img : img.url} alt="" className="w-full h-full object-cover" />
                   </button>
                 ))}
               </div>
@@ -229,14 +254,14 @@ export default function ProductDetail() {
 
               {/* Color Selection */}
               <div>
-                <h3 className="font-medium mb-3">Warna: {selectedColor.name}</h3>
+                <h3 className="font-medium mb-3">Warna: {selectedColor?.name || ""}</h3>
                 <div className="flex gap-3">
-                  {product.colors.map((color: any) => (
+                  {product.colors?.map((color: ProductColor) => (
                     <button
                       key={color.hex}
                       onClick={() => setSelectedColor(color)}
                       className={`w-10 h-10 rounded-full border-2 transition-all ${
-                        selectedColor.hex === color.hex
+                        selectedColor?.hex === color.hex
                           ? "border-primary ring-2 ring-primary/20"
                           : "border-border hover:border-primary/50"
                       }`}
@@ -256,7 +281,7 @@ export default function ProductDetail() {
                   </button>
                 </div>
                 <div className="flex gap-3 flex-wrap">
-                  {product.sizes.map((size: string) => (
+                  {product.sizes?.map((size: string) => (
                     <button
                       key={size}
                       onClick={() => setSelectedSize(size)}
@@ -296,7 +321,7 @@ export default function ProductDetail() {
                     </Button>
                   </div>
                   <span className="text-sm text-muted-foreground">
-                    Stok: {product.stock}
+                    Stok: {product.stock ?? 0}
                   </span>
                 </div>
               </div>
@@ -354,11 +379,24 @@ export default function ProductDetail() {
         </section>
 
         {/* Related Products */}
-        <ProductGrid
-          title="Produk Terkait"
-          subtitle="Anda mungkin juga suka"
-          viewAllHref={`/collections/${product.category?.slug || 'all'}`}
-        />
+        <section className="py-12 lg:py-16">
+          <div className="container mx-auto px-4 lg:px-0">
+            <h2 className="font-serif text-3xl md:text-4xl text-foreground mb-8">
+              Produk Terkait
+            </h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+              {relatedProducts?.map((item: Product) => (
+                <ProductCard 
+                  key={item.id} 
+                  product={item} 
+                />
+              ))}
+              {(!relatedProducts || relatedProducts.length === 0) && (
+                <p className="col-span-full text-muted-foreground text-center">Tidak ada produk terkait.</p>
+              )}
+            </div>
+          </div>
+        </section>
       </main>
 
       <Footer />

@@ -1,12 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { fetcher } from '@/lib/api-client';
 import { toast } from 'sonner';
-
-interface User {
-  id: string;
-  email: string;
-  name: string | null;
-}
+import { User } from '@/types';
 
 interface LoginResponse {
   message: string;
@@ -23,8 +18,8 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (data: any) => Promise<void>;
-  register: (data: any) => Promise<void>;
+  login: (data: Record<string, string>) => Promise<void>;
+  register: (data: Record<string, string>) => Promise<void>;
   logout: () => void;
 }
 
@@ -51,7 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(false);
   }, []);
 
-  const login = async (data: any) => {
+  const login = async (data: Record<string, string>) => {
     try {
       const response = await fetcher<LoginResponse>('/auth/login', {
         method: 'POST',
@@ -63,14 +58,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(response.user);
       
       toast.success(response.message);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Login failed";
       console.error("Login error:", error);
-      toast.error(error.message || "Login failed");
+      toast.error(message);
       throw error;
     }
   };
 
-  const register = async (data: any) => {
+  const register = async (data: Record<string, string>) => {
     try {
       const response = await fetcher<RegisterResponse>('/auth/register', {
         method: 'POST',
@@ -78,9 +74,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       
       toast.success(response.message);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Registration failed";
       console.error("Register error:", error);
-      toast.error(error.message || "Registration failed");
+      toast.error(message);
       throw error;
     }
   };

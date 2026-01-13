@@ -9,14 +9,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
-import { formatPrice } from "@/components/product/ProductCard";
+import { formatPrice } from "@/lib/utils";
 import { toast } from "sonner";
 import { fetcher } from "@/lib/api-client";
+import { Order, VoucherResponse, MidtransSnap } from "@/types";
 
 export default function Checkout() {
   const { items, subtotal, clearCart } = useCart();
   const navigate = useNavigate();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [promoCode, setPromoCode] = useState("");
+  const [appliedVoucher, setAppliedVoucher] = useState<VoucherResponse | null>(null);
+  
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -27,11 +31,28 @@ export default function Checkout() {
     postalCode: ""
   });
 
+  const discountAmount = appliedVoucher ? appliedVoucher.discountAmount : 0;
   const shippingCost = subtotal >= 500000 ? 0 : 25000;
-  const total = subtotal + shippingCost;
+  const total = subtotal + shippingCost - discountAmount;
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.id]: e.target.value });
+  };
+
+  const handleApplyVoucher = async () => {
+    if (!promoCode.trim()) return;
+    try {
+        const result = await fetcher<VoucherResponse>('/vouchers/validate', {
+            method: 'POST',
+            body: JSON.stringify({ code: promoCode, orderAmount: subtotal })
+        });
+        setAppliedVoucher(result);
+        toast.success(`Voucher ${result.code} berhasil dipasang!`);
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : "Kode promo tidak valid";
+        toast.error(message);
+        setAppliedVoucher(null);
+    }
   };
 
   const handleCheckout = async (e: React.FormEvent) => {
@@ -39,19 +60,54 @@ export default function Checkout() {
     setIsProcessing(true);
 
     try {
-        await fetcher('/orders', {
+        const order = await fetcher<Order>('/orders', {
             method: 'POST',
-            body: JSON.stringify(formData) 
+            body: JSON.stringify({
+                ...formData,
+                voucherId: appliedVoucher?.voucherId
+            }) 
         });
         
-        // Clear local cart context state (Backend cart is cleared by server)
-        await clearCart(); 
-        
-        toast.success("Pesanan berhasil dibuat!");
-        navigate("/"); 
-    } catch (error: any) {
+        // 1. Get Snap Token
+        const { snap_token } = await fetcher<{ snap_token: string }>(`/payments/snap-token/${order.id}`, {
+            method: 'POST'
+        });
+
+        // 2. Open Midtrans Snap Popup
+        const snap = window.snap;
+        if (snap) {
+            snap.pay(snap_token, {
+                onSuccess: (result: unknown) => {
+                    console.log('Payment success:', result);
+                    toast.success("Pembayaran berhasil!");
+                    void clearCart();
+                    navigate("/profile");
+                },
+                onPending: (result: unknown) => {
+                    console.log('Payment pending:', result);
+                    toast.info("Pembayaran tertunda, silakan selesaikan pembayaran Anda.");
+                    void clearCart();
+                    navigate("/profile");
+                },
+                onError: (result: unknown) => {
+                    console.error('Payment error:', result);
+                    toast.error("Pembayaran gagal.");
+                },
+                onClose: () => {
+                    console.log('Payment popup closed');
+                    toast.info("Anda menutup jendela pembayaran sebelum selesai.");
+                    void clearCart();
+                    navigate("/profile");
+                }
+            });
+        } else {
+            toast.error("Sistem pembayaran sedang tidak tersedia.");
+            navigate("/profile");
+        }
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : "Gagal membuat pesanan";
         console.error(error);
-        toast.error(error.message || "Gagal membuat pesanan");
+        toast.error(message);
     } finally {
         setIsProcessing(false);
     }
@@ -183,6 +239,30 @@ export default function Checkout() {
                     <span className="text-muted-foreground">Subtotal</span>
                     <span>{formatPrice(subtotal)}</span>
                   </div>
+                  
+                  {/* Voucher Input */}
+                  <div className="flex gap-2 py-2">
+                    <Input 
+                        placeholder="Punya kode promo?" 
+                        value={promoCode}
+                        onChange={(e) => setPromoCode(e.target.value)}
+                        className="h-9 text-xs"
+                        disabled={!!appliedVoucher}
+                    />
+                    {appliedVoucher ? (
+                        <Button variant="outline" size="sm" className="h-9 text-xs" onClick={() => {setAppliedVoucher(null); setPromoCode("");}}>Hapus</Button>
+                    ) : (
+                        <Button variant="outline" size="sm" className="h-9 text-xs" onClick={handleApplyVoucher}>Pasang</Button>
+                    )}
+                  </div>
+
+                  {appliedVoucher && (
+                    <div className="flex justify-between text-sm text-green-600">
+                        <span>Diskon ({appliedVoucher.code})</span>
+                        <span>-{formatPrice(appliedVoucher.discountAmount)}</span>
+                    </div>
+                  )}
+
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Ongkos Kirim</span>
                     <span>{shippingCost === 0 ? "Gratis" : formatPrice(shippingCost)}</span>

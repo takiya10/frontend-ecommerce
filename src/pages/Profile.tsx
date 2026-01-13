@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { User, Package, MapPin, Settings, LogOut, Plus, Trash2 } from "lucide-react";
+import { User as UserIcon, Package, MapPin, Settings, LogOut, Plus, Trash2 } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { fetcher } from "@/lib/api-client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { formatPrice } from "@/components/product/ProductCard";
+import { formatPrice } from "@/lib/utils";
+import { User, Order, Address } from "@/types";
 
 export default function Profile() {
   const { user, logout, isAuthenticated } = useAuth();
@@ -20,35 +21,31 @@ export default function Profile() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("overview");
 
-  // Redirect if not logged in
-  if (!isAuthenticated) {
-    navigate("/login");
-    return null;
-  }
-
   // --- DATA FETCHING ---
   const { data: profile } = useQuery({
     queryKey: ['profile'],
-    queryFn: () => fetcher<any>('/users/profile'),
+    queryFn: () => fetcher<User>('/users/profile'),
+    enabled: isAuthenticated,
   });
 
   const { data: orders } = useQuery({
     queryKey: ['orders'],
-    queryFn: () => fetcher<any[]>('/orders'),
+    queryFn: () => fetcher<Order[]>('/orders'),
+    enabled: isAuthenticated,
   });
 
   const { data: addresses } = useQuery({
     queryKey: ['addresses'],
-    queryFn: () => fetcher<any[]>('/address'),
+    queryFn: () => fetcher<Address[]>('/address'),
+    enabled: isAuthenticated,
   });
 
   // --- MUTATIONS ---
   const addAddressMutation = useMutation({
-    mutationFn: (data: any) => fetcher('/address', { method: 'POST', body: JSON.stringify(data) }),
+    mutationFn: (data: Partial<Address>) => fetcher<Address>('/address', { method: 'POST', body: JSON.stringify(data) }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['addresses'] });
       toast.success("Alamat berhasil ditambahkan");
-      // Reset form logic needed
     },
   });
 
@@ -60,19 +57,55 @@ export default function Profile() {
     },
   });
 
+  // Redirect if not logged in
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate("/login");
+    }
+  }, [isAuthenticated, navigate]);
+
+  if (!isAuthenticated) {
+    return null;
+  }
+
   // --- HANDLERS ---
   const handleLogout = () => {
     logout();
     navigate("/login");
   };
 
-  const handleAddAddress = (e: React.FormEvent) => {
+  const handlePayOrder = async (orderId: string) => {
+    try {
+      const { snap_token } = await fetcher<{ snap_token: string }>(`/payments/snap-token/${orderId}`, {
+        method: 'POST'
+      });
+
+      if (window.snap) {
+        window.snap.pay(snap_token, {
+          onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['orders'] });
+            toast.success("Pembayaran berhasil!");
+          },
+          onPending: () => {
+            toast.info("Pembayaran masih tertunda.");
+          },
+          onClose: () => {
+            toast.info("Jendela pembayaran ditutup.");
+          }
+        });
+      }
+    } catch (error) {
+      toast.error("Gagal memulai pembayaran.");
+    }
+  };
+
+  const handleAddAddress = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const form = e.target as HTMLFormElement;
+    const form = e.currentTarget;
     const formData = new FormData(form);
     const data = Object.fromEntries(formData.entries());
     
-    addAddressMutation.mutate(data);
+    addAddressMutation.mutate(data as unknown as Partial<Address>);
     form.reset();
   };
 
@@ -87,7 +120,7 @@ export default function Profile() {
             <Card>
               <CardHeader className="text-center border-b pb-6">
                 <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <User className="h-10 w-10 text-primary" />
+                  <UserIcon className="h-10 w-10 text-primary" />
                 </div>
                 <CardTitle>{profile?.name || user?.email}</CardTitle>
                 <CardDescription>{user?.email}</CardDescription>
@@ -95,7 +128,7 @@ export default function Profile() {
               <CardContent className="p-0">
                 <nav className="flex flex-col">
                   <Button variant="ghost" className="justify-start rounded-none h-12" onClick={() => setActiveTab("overview")}>
-                    <User className="mr-3 h-4 w-4" /> Profil
+                    <UserIcon className="mr-3 h-4 w-4" /> Profil
                   </Button>
                   <Button variant="ghost" className="justify-start rounded-none h-12" onClick={() => setActiveTab("orders")}>
                     <Package className="mr-3 h-4 w-4" /> Pesanan Saya
@@ -147,7 +180,7 @@ export default function Profile() {
                       {orders?.length === 0 ? (
                         <p className="text-center text-muted-foreground py-8">Belum ada pesanan.</p>
                       ) : (
-                        orders?.map((order: any) => (
+                        orders?.map((order) => (
                           <div key={order.id} className="border rounded-lg p-4">
                             <div className="flex justify-between items-start mb-4 border-b pb-2">
                               <div>
@@ -161,10 +194,20 @@ export default function Profile() {
                                   {order.status}
                                 </span>
                                 <p className="font-bold mt-1">{formatPrice(order.totalAmount)}</p>
+                                {order.status === 'PENDING' && (
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline" 
+                                    className="mt-2 h-7 text-xs border-primary text-primary hover:bg-primary hover:text-white"
+                                    onClick={() => handlePayOrder(order.id)}
+                                  >
+                                    Bayar Sekarang
+                                  </Button>
+                                )}
                               </div>
                             </div>
                             <div className="space-y-2">
-                              {order.items.map((item: any) => (
+                              {order.items.map((item) => (
                                 <div key={item.id} className="flex gap-3 text-sm">
                                   <img 
                                     src={item.product.images?.[0]?.url || "/placeholder.jpg"} 
@@ -214,7 +257,7 @@ export default function Profile() {
 
                     {/* Address List */}
                     <div className="grid gap-4">
-                      {addresses?.map((addr: any) => (
+                      {addresses?.map((addr) => (
                         <div key={addr.id} className="flex justify-between items-center border p-4 rounded-lg">
                           <div>
                             <p className="font-bold">{addr.firstName} {addr.lastName}</p>

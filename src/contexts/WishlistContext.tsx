@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { fetcher } from "@/lib/api-client";
+import { Product } from "@/types";
 
 import product1 from "@/assets/product-1.jpg";
 
@@ -12,6 +13,12 @@ export interface WishlistItem {
   price: number;
   image: string;
   inStock: boolean;
+}
+
+interface BackendWishlistItem {
+  userId: string;
+  productId: string;
+  product: Product;
 }
 
 interface WishlistContextType {
@@ -83,8 +90,8 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
 
   const fetchWishlist = async () => {
       try {
-          const items = await fetcher<any[]>('/wishlist');
-          const mappedItems: WishlistItem[] = items.map((item: any) => ({
+          const items = await fetcher<BackendWishlistItem[]>('/wishlist');
+          const mappedItems: WishlistItem[] = items.map((item) => ({
               id: item.productId,
               name: item.product.name,
               slug: item.product.slug,
