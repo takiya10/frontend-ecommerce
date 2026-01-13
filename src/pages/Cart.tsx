@@ -7,68 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatPrice } from "@/components/product/ProductCard";
 import { toast } from "sonner";
-
-import product1 from "@/assets/product-1.jpg";
-import product2 from "@/assets/product-2.jpg";
-
-interface CartItem {
-  id: string;
-  name: string;
-  slug: string;
-  price: number;
-  image: string;
-  size: string;
-  color: string;
-  quantity: number;
-}
-
-const initialCartItems: CartItem[] = [
-  {
-    id: "1",
-    name: "Floure Embroidery Set Dessert Taupe L-XL Series",
-    slug: "floure-embroidery-set-dessert-taupe",
-    price: 429000,
-    image: product1,
-    size: "L-XL",
-    color: "Dessert Taupe",
-    quantity: 1,
-  },
-  {
-    id: "2",
-    name: "Sage Piping Dress with Belt",
-    slug: "sage-piping-dress",
-    price: 389000,
-    image: product2,
-    size: "S-M",
-    color: "Sage",
-    quantity: 2,
-  },
-];
+import { useCart } from "@/contexts/CartContext";
 
 export default function Cart() {
-  const [cartItems, setCartItems] = useState(initialCartItems);
+  const { items, removeItem, updateQuantity, subtotal } = useCart();
   const [promoCode, setPromoCode] = useState("");
 
-  const subtotal = cartItems.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  );
   const shipping = subtotal >= 500000 ? 0 : 25000;
   const total = subtotal + shipping;
-
-  const updateQuantity = (id: string, newQuantity: number) => {
-    if (newQuantity < 1) return;
-    setCartItems((items) =>
-      items.map((item) =>
-        item.id === id ? { ...item, quantity: newQuantity } : item
-      )
-    );
-  };
-
-  const removeItem = (id: string) => {
-    setCartItems((items) => items.filter((item) => item.id !== id));
-    toast.success("Produk dihapus dari keranjang");
-  };
 
   const applyPromo = () => {
     if (!promoCode.trim()) return;
@@ -76,7 +22,7 @@ export default function Cart() {
     setPromoCode("");
   };
 
-  if (cartItems.length === 0) {
+  if (items.length === 0) {
     return (
       <div className="min-h-screen flex flex-col">
         <Header />
@@ -114,9 +60,9 @@ export default function Cart() {
           <div className="grid lg:grid-cols-3 gap-8">
             {/* Cart Items */}
             <div className="lg:col-span-2 space-y-4">
-              {cartItems.map((item) => (
+              {items.map((item) => (
                 <article
-                  key={item.id}
+                  key={`${item.id}-${item.size}-${item.color}`}
                   className="flex gap-4 p-4 bg-card rounded-lg border border-border"
                 >
                   <Link to={`/products/${item.slug}`} className="shrink-0">

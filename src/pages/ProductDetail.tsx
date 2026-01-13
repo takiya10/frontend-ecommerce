@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { ChevronRight, Minus, Plus, Heart, Share2, Truck, RotateCcw, Shield } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
@@ -8,6 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { formatPrice } from "@/components/product/ProductCard";
 import { ProductGrid } from "@/components/home/ProductGrid";
 import { toast } from "sonner";
+import { useCart } from "@/contexts/CartContext";
+import { useWishlist } from "@/contexts/WishlistContext";
+import { cn } from "@/lib/utils";
 
 import product1 from "@/assets/product-1.jpg";
 import product2 from "@/assets/product-2.jpg";
@@ -38,6 +41,9 @@ Fitur:
 
 export default function ProductDetail() {
   const { slug } = useParams();
+  const navigate = useNavigate();
+  const { addItem } = useCart();
+  const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [selectedColor, setSelectedColor] = useState(product.colors[0]);
@@ -47,12 +53,41 @@ export default function ProductDetail() {
     ? Math.round((1 - product.price / product.originalPrice) * 100)
     : 0;
 
+  const inWishlist = isInWishlist(product.id);
+
+  const handleToggleWishlist = () => {
+    if (inWishlist) {
+      removeFromWishlist(product.id);
+    } else {
+      addToWishlist({
+        id: product.id,
+        name: product.name,
+        slug: product.slug,
+        price: product.price,
+        image: product.images[0],
+        inStock: product.stock > 0,
+      });
+    }
+  };
+
   const handleAddToCart = () => {
     if (!selectedSize) {
       toast.error("Silakan pilih ukuran terlebih dahulu");
       return;
     }
-    toast.success(`${product.name} ditambahkan ke keranjang`);
+
+    // Loop quantity times to add correct amount
+    for(let i=0; i<quantity; i++) {
+        addItem({
+            id: product.id,
+            name: product.name,
+            slug: product.slug,
+            price: product.price,
+            image: product.images[0],
+            size: selectedSize,
+            color: selectedColor.name
+        });
+    }
   };
 
   const handleBuyNow = () => {
@@ -60,8 +95,19 @@ export default function ProductDetail() {
       toast.error("Silakan pilih ukuran terlebih dahulu");
       return;
     }
-    // Navigate to checkout
-    toast.success("Menuju halaman checkout...");
+    
+    // Add to cart then navigate
+    addItem({
+        id: product.id,
+        name: product.name,
+        slug: product.slug,
+        price: product.price,
+        image: product.images[0],
+        size: selectedSize,
+        color: selectedColor.name
+    });
+    
+    navigate("/checkout");
   };
 
   return (
@@ -70,7 +116,7 @@ export default function ProductDetail() {
 
       <main className="flex-1">
         {/* Breadcrumb */}
-        <nav className="container mx-auto py-4">
+        <nav className="container mx-auto py-4 px-4 lg:px-0">
           <ol className="flex items-center gap-2 text-sm text-muted-foreground">
             <li><Link to="/" className="hover:text-foreground">Home</Link></li>
             <ChevronRight className="h-4 w-4" />
@@ -81,7 +127,7 @@ export default function ProductDetail() {
         </nav>
 
         {/* Product Section */}
-        <section className="container mx-auto pb-16">
+        <section className="container mx-auto pb-16 px-4 lg:px-0">
           <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
             {/* Images */}
             <div className="space-y-4">
@@ -97,12 +143,12 @@ export default function ProductDetail() {
                   </Badge>
                 )}
               </div>
-              <div className="flex gap-3">
+              <div className="flex gap-3 overflow-x-auto pb-2">
                 {product.images.map((img, i) => (
                   <button
                     key={i}
                     onClick={() => setSelectedImage(i)}
-                    className={`w-20 h-24 rounded-md overflow-hidden border-2 transition-colors ${
+                    className={`shrink-0 w-20 h-24 rounded-md overflow-hidden border-2 transition-colors ${
                       selectedImage === i ? "border-primary" : "border-transparent"
                     }`}
                   >
@@ -161,7 +207,7 @@ export default function ProductDetail() {
                     Panduan Ukuran
                   </button>
                 </div>
-                <div className="flex gap-3">
+                <div className="flex gap-3 flex-wrap">
                   {product.sizes.map((size) => (
                     <button
                       key={size}
@@ -212,8 +258,16 @@ export default function ProductDetail() {
                 <Button variant="cart" size="lg" className="flex-1" onClick={handleAddToCart}>
                   Tambah ke Keranjang
                 </Button>
-                <Button variant="ghost" size="lg" className="border border-border">
-                  <Heart className="h-5 w-5" />
+                <Button 
+                  variant="ghost" 
+                  size="lg" 
+                  className={cn(
+                    "border border-border",
+                    inWishlist && "text-red-500 hover:text-red-600 border-red-200 bg-red-50"
+                  )}
+                  onClick={handleToggleWishlist}
+                >
+                  <Heart className={cn("h-5 w-5", inWishlist && "fill-current")} />
                 </Button>
                 <Button variant="ghost" size="lg" className="border border-border">
                   <Share2 className="h-5 w-5" />
