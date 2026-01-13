@@ -13,6 +13,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Checkout from "./pages/Checkout";
 import Wishlist from "./pages/Wishlist";
+import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import StaticPage from "./pages/StaticPage";
 
@@ -38,6 +39,8 @@ const App = () => (
               <Route path="/register" element={<Register />} />
               <Route path="/checkout" element={<Checkout />} />
               <Route path="/wishlist" element={<Wishlist />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/orders" element={<Profile />} /> {/* Redirect to Profile > Orders */}
               <Route path="/pages/:slug" element={<StaticPage />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />

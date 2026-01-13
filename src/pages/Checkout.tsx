@@ -11,26 +11,50 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { formatPrice } from "@/components/product/ProductCard";
 import { toast } from "sonner";
+import { fetcher } from "@/lib/api-client";
 
 export default function Checkout() {
   const { items, subtotal, clearCart } = useCart();
   const navigate = useNavigate();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    address: "",
+    city: "",
+    postalCode: ""
+  });
 
   const shippingCost = subtotal >= 500000 ? 0 : 25000;
   const total = subtotal + shippingCost;
 
-  const handleCheckout = (e: React.FormEvent) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setFormData({ ...formData, [e.target.id]: e.target.value });
+  };
+
+  const handleCheckout = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsProcessing(true);
 
-    // Simulate API call
-    setTimeout(() => {
-      setIsProcessing(false);
-      clearCart();
-      toast.success("Pesanan berhasil dibuat!");
-      navigate("/");
-    }, 2000);
+    try {
+        await fetcher('/orders', {
+            method: 'POST',
+            body: JSON.stringify(formData) 
+        });
+        
+        // Clear local cart context state (Backend cart is cleared by server)
+        await clearCart(); 
+        
+        toast.success("Pesanan berhasil dibuat!");
+        navigate("/"); 
+    } catch (error: any) {
+        console.error(error);
+        toast.error(error.message || "Gagal membuat pesanan");
+    } finally {
+        setIsProcessing(false);
+    }
   };
 
   if (items.length === 0) {
@@ -67,37 +91,37 @@ export default function Checkout() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="firstName">Nama Depan</Label>
-                      <Input id="firstName" required placeholder="John" />
+                      <Input id="firstName" required placeholder="John" value={formData.firstName} onChange={handleInputChange} />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="lastName">Nama Belakang</Label>
-                      <Input id="lastName" required placeholder="Doe" />
+                      <Input id="lastName" required placeholder="Doe" value={formData.lastName} onChange={handleInputChange} />
                     </div>
                   </div>
                   
                   <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>
-                    <Input id="email" type="email" required placeholder="john@example.com" />
+                    <Input id="email" type="email" required placeholder="john@example.com" value={formData.email} onChange={handleInputChange} />
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="phone">Nomor Telepon</Label>
-                    <Input id="phone" type="tel" required placeholder="08123456789" />
+                    <Input id="phone" type="tel" required placeholder="08123456789" value={formData.phone} onChange={handleInputChange} />
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="address">Alamat Lengkap</Label>
-                    <Textarea id="address" required placeholder="Nama jalan, nomor rumah, RT/RW" />
+                    <Textarea id="address" required placeholder="Nama jalan, nomor rumah, RT/RW" value={formData.address} onChange={handleInputChange} />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="city">Kota / Kabupaten</Label>
-                      <Input id="city" required />
+                      <Input id="city" required value={formData.city} onChange={handleInputChange} />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="postalCode">Kode Pos</Label>
-                      <Input id="postalCode" required />
+                      <Input id="postalCode" required value={formData.postalCode} onChange={handleInputChange} />
                     </div>
                   </div>
                 </div>

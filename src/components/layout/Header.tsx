@@ -1,4 +1,4 @@
-import { ShoppingBag, Search, User, Menu, X, Heart, ChevronRight, Calculator, Calendar, CreditCard, Settings, Smile, LogOut } from "lucide-react";
+import { ShoppingBag, Search, User, Menu, X, Heart, ChevronRight, Calculator, Calendar, CreditCard, Settings, Smile, LogOut, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,8 @@ import logoImage from "@/assets/logo.png";
 import { useCart } from "@/contexts/CartContext";
 import { useWishlist } from "@/contexts/WishlistContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useQuery } from "@tanstack/react-query";
+import { fetcher } from "@/lib/api-client";
 import {
   CommandDialog,
   CommandEmpty,
@@ -26,41 +28,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 import product1 from "@/assets/product-1.jpg";
-import product2 from "@/assets/product-2.jpg";
-import product3 from "@/assets/product-3.jpg";
-import product4 from "@/assets/product-4.jpg";
-
-// Mock products for search
-const mockProducts = [
-  {
-    id: "1",
-    name: "Floure Embroidery Set Dessert Taupe L-XL Series",
-    slug: "floure-embroidery-set-dessert-taupe",
-    price: 429000,
-    image: product1,
-  },
-  {
-    id: "2",
-    name: "Sage Piping Dress with Belt",
-    slug: "sage-piping-dress",
-    price: 389000,
-    image: product2,
-  },
-  {
-    id: "3",
-    name: "Dusty Rose Modest Set",
-    slug: "dusty-rose-modest-set",
-    price: 419000,
-    image: product3,
-  },
-  {
-    id: "4",
-    name: "Embroidered Cream Elegant Dress",
-    slug: "embroidered-cream-elegant-dress",
-    price: 549000,
-    image: product4,
-  },
-];
 
 const formatPrice = (price: number) => {
   return new Intl.NumberFormat("id-ID", {
@@ -84,7 +51,23 @@ export function Header() {
   const { user, isAuthenticated, logout } = useAuth();
   const [openSearch, setOpenSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const navigate = useNavigate();
+
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 500); // Wait 500ms after last keystroke
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Fetch search results
+  const { data: searchResults, isLoading: isSearching } = useQuery({
+    queryKey: ['search', debouncedSearch],
+    queryFn: () => fetcher<any[]>(`/products?search=${debouncedSearch}`),
+    enabled: debouncedSearch.length > 0,
+  });
 
   useEffect(() => {
     if (mobileMenuOpen) {
@@ -255,53 +238,63 @@ export function Header() {
         </div>
       </nav>
 
-
       {/* Search Command Dialog */}
-      <CommandDialog open={openSearch} onOpenChange={setOpenSearch}>
+      <CommandDialog open={openSearch} onOpenChange={setOpenSearch} shouldFilter={false}>
         <CommandInput 
-          placeholder="Cari produk..." 
+          placeholder="Cari produk (misal: dress, taupe)..." 
           value={searchQuery}
           onValueChange={setSearchQuery}
         />
         <CommandList>
-          <CommandEmpty>Produk tidak ditemukan.</CommandEmpty>
+          <CommandEmpty>
+            {isSearching ? (
+               <div className="flex items-center justify-center py-4">
+                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+               </div>
+            ) : (
+               "Produk tidak ditemukan."
+            )}
+          </CommandEmpty>
           
-          <CommandGroup heading="Produk">
-            {mockProducts.map((product) => (
-              <CommandItem 
-                key={product.id} 
-                onSelect={() => runCommand(() => navigate(`/products/${product.slug}`))}
-                className="flex items-center gap-3 p-2"
-              >
-                <img 
-                  src={product.image} 
-                  alt={product.name} 
-                  className="w-10 h-12 object-cover rounded shadow-sm"
-                />
-                <div className="flex flex-col">
-                  <span className="font-medium text-sm line-clamp-1">{product.name}</span>
-                  <span className="text-xs text-muted-foreground">{formatPrice(product.price)}</span>
-                </div>
-              </CommandItem>
-            ))}
-          </CommandGroup>
+          {searchResults && searchResults.length > 0 && (
+            <CommandGroup heading="Produk">
+              {searchResults.map((product) => (
+                <CommandItem 
+                  key={product.id} 
+                  value={product.name}
+                  onSelect={() => runCommand(() => navigate(`/products/${product.slug}`))}
+                  className="flex items-center gap-3 p-2 cursor-pointer"
+                >
+                  <img 
+                    src={product.images?.[0]?.url || product1} // Fallback image
+                    alt={product.name} 
+                    className="w-10 h-12 object-cover rounded shadow-sm"
+                  />
+                  <div className="flex flex-col">
+                    <span className="font-medium text-sm line-clamp-1">{product.name}</span>
+                    <span className="text-xs text-muted-foreground">{formatPrice(product.price)}</span>
+                  </div>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          )}
 
           <CommandSeparator />
 
           <CommandGroup heading="Navigasi">
-            <CommandItem onSelect={() => runCommand(() => navigate("/collections/all"))}>
+            <CommandItem value="shop-all" onSelect={() => runCommand(() => navigate("/collections/all"))}>
               <ShoppingBag className="mr-2 h-4 w-4" />
               <span>Belanja Semua</span>
             </CommandItem>
-            <CommandItem onSelect={() => runCommand(() => navigate("/wishlist"))}>
+            <CommandItem value="nav-wishlist" onSelect={() => runCommand(() => navigate("/wishlist"))}>
               <Heart className="mr-2 h-4 w-4" />
               <span>Wishlist</span>
             </CommandItem>
-            <CommandItem onSelect={() => runCommand(() => navigate("/journal"))}>
+            <CommandItem value="nav-journal" onSelect={() => runCommand(() => navigate("/journal"))}>
               <Calendar className="mr-2 h-4 w-4" />
               <span>Journal</span>
             </CommandItem>
-            <CommandItem onSelect={() => runCommand(() => navigate("/login"))}>
+            <CommandItem value="nav-login" onSelect={() => runCommand(() => navigate("/login"))}>
               <User className="mr-2 h-4 w-4" />
               <span>Masuk / Daftar</span>
             </CommandItem>

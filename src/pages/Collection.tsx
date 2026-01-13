@@ -45,17 +45,23 @@ export default function Collection() {
   const [sortBy, setSortBy] = useState("featured");
   
   // Fetch products from API
-  const { data: fetchedProducts, isLoading } = useQuery({
+  const { data: fetchedProducts, isLoading, error } = useQuery({
     queryKey: ['products', slug, sortBy],
     queryFn: () => fetcher<any[]>(`/products?category=${slug || 'all'}&sort=${sortBy}`),
   });
 
   const products = fetchedProducts || [];
 
+  // Debugging logs
+  console.log("Collection Slug:", slug);
+  console.log("Fetched Products:", products);
+  console.log("Is Loading:", isLoading);
+  console.log("Error:", error);
+
   const collectionName = collectionNames[slug || "all"] || (slug ? slug.charAt(0).toUpperCase() + slug.slice(1) : "Koleksi");
   
   const priceBounds = useMemo(() => {
-    if (products.length === 0) return { min: 0, max: 1000000 };
+    if (products.length === 0) return { min: 0, max: 100000000 }; // Increase max default
     const prices = products.map((product) => product.price);
     return {
       min: Math.min(...prices),
@@ -66,15 +72,18 @@ export default function Collection() {
   const [gridCols, setGridCols] = useState<2 | 3 | 4>(4);
   const [showFilters, setShowFilters] = useState(false);
   const [availability, setAvailability] = useState({ inStock: true, outOfStock: true });
+  // Initialize state with wide bounds, then update via effect
   const [priceRange, setPriceRange] = useState({
-    min: priceBounds.min,
-    max: priceBounds.max,
+    min: 0,
+    max: 100000000,
   });
 
-  // Update price range when bounds change (e.g. data loaded)
+  // Update price range when bounds change (data loaded)
   useMemo(() => {
-    setPriceRange({ min: priceBounds.min, max: priceBounds.max });
-  }, [priceBounds]);
+    if (products.length > 0) {
+        setPriceRange({ min: priceBounds.min, max: priceBounds.max });
+    }
+  }, [priceBounds, products.length]);
 
   const gridClass = {
     2: "grid-cols-2",

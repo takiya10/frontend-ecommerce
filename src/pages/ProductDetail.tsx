@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { ChevronRight, Minus, Plus, Heart, Share2, Truck, RotateCcw, Shield } from "lucide-react";
 import { Header } from "@/components/layout/Header";
@@ -11,43 +11,87 @@ import { toast } from "sonner";
 import { useCart } from "@/contexts/CartContext";
 import { useWishlist } from "@/contexts/WishlistContext";
 import { cn } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
+import { fetcher } from "@/lib/api-client";
+import { Skeleton } from "@/components/ui/skeleton";
 
 import product1 from "@/assets/product-1.jpg";
 import product2 from "@/assets/product-2.jpg";
 
-const product = {
-  id: "1",
-  name: "Floure Embroidery Set Dessert Taupe L-XL Series",
-  slug: "floure-embroidery-set-dessert-taupe",
-  price: 429000,
-  originalPrice: 459000,
-  images: [product1, product2],
-  badge: "sale" as const,
-  description: `Set lengkap dengan detail bordir yang elegan. Dibuat dari bahan premium yang nyaman dipakai seharian.
-
-Fitur:
-• Bahan premium breathable
-• Detail bordir eksklusif
-• Cutting yang flattering
-• Cocok untuk acara formal maupun casual`,
-  sizes: ["S-M", "L-XL"],
-  colors: [
-    { name: "Dessert Taupe", hex: "#8B7355" },
-    { name: "Cream", hex: "#F5E6D3" },
-    { name: "Sage", hex: "#8B9A6B" },
-  ],
-  stock: 15,
-};
+const PLACEHOLDER_IMAGES = [product1, product2];
 
 export default function ProductDetail() {
   const { slug } = useParams();
   const navigate = useNavigate();
   const { addItem } = useCart();
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
+  
+  const { data: fetchedProduct, isLoading, error } = useQuery({
+    queryKey: ['product', slug],
+    queryFn: () => fetcher<any>(`/products/${slug}`),
+    enabled: !!slug,
+  });
+
+  const product = fetchedProduct ? {
+    ...fetchedProduct,
+    images: fetchedProduct.images && fetchedProduct.images.length > 0 
+        ? fetchedProduct.images.map((img: any) => img.url) 
+        : PLACEHOLDER_IMAGES,
+    colors: [
+       { name: "Default", hex: "#8B7355" }, // Dummy colors until backend has them
+       { name: "Variant 2", hex: "#F5E6D3" }
+    ],
+    sizes: ["S", "M", "L", "XL"], // Dummy sizes until backend has them
+    originalPrice: fetchedProduct.price * 1.1, // Dummy original price
+    badge: "new"
+  } : null;
+
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
-  const [selectedColor, setSelectedColor] = useState(product.colors[0]);
+  const [selectedColor, setSelectedColor] = useState(product?.colors?.[0] || { name: "Default", hex: "#8B7355" });
   const [quantity, setQuantity] = useState(1);
+
+  // Reset state when product changes
+  useEffect(() => {
+    if (product) {
+      setSelectedColor(product.colors[0]);
+      setSelectedSize(null);
+      setQuantity(1);
+      setSelectedImage(0);
+    }
+  }, [product?.id]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <main className="flex-1 container mx-auto py-12 px-4">
+          <div className="grid md:grid-cols-2 gap-8">
+            <Skeleton className="aspect-[3/4] w-full rounded-lg" />
+            <div className="space-y-4">
+              <Skeleton className="h-10 w-3/4" />
+              <Skeleton className="h-6 w-1/4" />
+              <Skeleton className="h-32 w-full" />
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (error || !product) {
+    return (
+       <div className="min-h-screen flex flex-col">
+        <Header />
+        <main className="flex-1 container mx-auto py-12 text-center">
+          <h2 className="text-2xl font-bold text-red-500">Produk tidak ditemukan</h2>
+          <Link to="/">
+             <Button className="mt-4">Kembali ke Beranda</Button>
+          </Link>
+        </main>
+      </div>
+    );
+  }
 
   const discount = product.originalPrice
     ? Math.round((1 - product.price / product.originalPrice) * 100)
@@ -120,7 +164,11 @@ export default function ProductDetail() {
           <ol className="flex items-center gap-2 text-sm text-muted-foreground">
             <li><Link to="/" className="hover:text-foreground">Home</Link></li>
             <ChevronRight className="h-4 w-4" />
-            <li><Link to="/collections/outfit" className="hover:text-foreground">Outfit</Link></li>
+            <li>
+                <Link to={`/collections/${product.category?.slug || 'all'}`} className="hover:text-foreground">
+                    {product.category?.name || 'Koleksi'}
+                </Link>
+            </li>
             <ChevronRight className="h-4 w-4" />
             <li className="text-foreground truncate max-w-[200px]">{product.name}</li>
           </ol>
@@ -144,7 +192,7 @@ export default function ProductDetail() {
                 )}
               </div>
               <div className="flex gap-3 overflow-x-auto pb-2">
-                {product.images.map((img, i) => (
+                {product.images.map((img: string, i: number) => (
                   <button
                     key={i}
                     onClick={() => setSelectedImage(i)}
@@ -183,7 +231,7 @@ export default function ProductDetail() {
               <div>
                 <h3 className="font-medium mb-3">Warna: {selectedColor.name}</h3>
                 <div className="flex gap-3">
-                  {product.colors.map((color) => (
+                  {product.colors.map((color: any) => (
                     <button
                       key={color.hex}
                       onClick={() => setSelectedColor(color)}
@@ -208,7 +256,7 @@ export default function ProductDetail() {
                   </button>
                 </div>
                 <div className="flex gap-3 flex-wrap">
-                  {product.sizes.map((size) => (
+                  {product.sizes.map((size: string) => (
                     <button
                       key={size}
                       onClick={() => setSelectedSize(size)}
@@ -255,8 +303,8 @@ export default function ProductDetail() {
 
               {/* Actions */}
               <div className="flex gap-3 pt-4">
-                <Button variant="cart" size="lg" className="flex-1" onClick={handleAddToCart}>
-                  Tambah ke Keranjang
+                <Button variant="cart" size="lg" className="flex-1" onClick={handleAddToCart} disabled={product.stock === 0}>
+                  {product.stock === 0 ? "Habis" : "Tambah ke Keranjang"}
                 </Button>
                 <Button 
                   variant="ghost" 
@@ -274,7 +322,7 @@ export default function ProductDetail() {
                 </Button>
               </div>
 
-              <Button variant="hero" size="lg" className="w-full" onClick={handleBuyNow}>
+              <Button variant="hero" size="lg" className="w-full" onClick={handleBuyNow} disabled={product.stock === 0}>
                 Beli Sekarang
               </Button>
 
@@ -298,7 +346,7 @@ export default function ProductDetail() {
               <div className="pt-6 border-t border-border">
                 <h3 className="font-medium mb-3">Deskripsi</h3>
                 <p className="text-muted-foreground whitespace-pre-line text-sm leading-relaxed">
-                  {product.description}
+                  {product.description || "No description available."}
                 </p>
               </div>
             </div>
@@ -309,7 +357,7 @@ export default function ProductDetail() {
         <ProductGrid
           title="Produk Terkait"
           subtitle="Anda mungkin juga suka"
-          viewAllHref="/collections/outfit"
+          viewAllHref={`/collections/${product.category?.slug || 'all'}`}
         />
       </main>
 

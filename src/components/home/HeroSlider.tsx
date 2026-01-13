@@ -127,15 +127,17 @@ export function HeroSlider() {
                 {slide.ctas.map((cta, i) => (
                   <Button
                     key={i}
-                    variant="hero"
-                    className="w-full md:w-auto justify-center text-sm md:text-base"
+                    variant="outline"
+                    className="w-full md:w-auto justify-center text-xs md:text-sm bg-warm-brown/10 backdrop-blur-md border-warm-brown/20 text-warm-brown hover:bg-warm-brown/20 transition-all active:scale-[0.98] px-8 py-6 rounded-none tracking-widest uppercase shadow-none border"
                     style={{ animationDelay: `${(i + 1) * 0.1}s` }}
                   >
                     {cta.text.split(cta.highlight).map((part, j) => (
-                      <span key={j}>
+                      <span key={j} className="flex items-center gap-1">
                         {part}
                         {j === 0 && cta.highlight && (
-                          <span className="font-bold">{cta.highlight}</span>
+                          <span className="font-bold bg-warm-brown text-white px-2 py-0.5 rounded text-[10px] ml-1 shadow-sm">
+                            {cta.highlight}
+                          </span>
                         )}
                       </span>
                     ))}
