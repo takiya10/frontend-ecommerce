@@ -1,6 +1,6 @@
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
-import { HeroSlider } from "@/components/home/HeroSlider";
+import { HeroSection } from "@/components/home/HeroSection";
 import { ProductGrid } from "@/components/home/ProductGrid";
 import { CategoryGrid } from "@/components/home/CategoryGrid";
 import { Features } from "@/components/home/Features";
@@ -12,7 +12,7 @@ const Index = () => {
       <Header />
       
       <main className="flex-1">
-        <HeroSlider />
+        <HeroSection />
         
         <ProductGrid
           title="Best Seller"

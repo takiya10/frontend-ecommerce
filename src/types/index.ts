@@ -213,19 +213,65 @@ export interface MidtransResult {
 
 export interface MidtransSnap {
 
+
+
   pay: (token: string, options?: {
+
+
 
     onSuccess?: (result: MidtransResult) => void;
 
+
+
     onPending?: (result: MidtransResult) => void;
+
+
 
     onError?: (result: MidtransResult) => void;
 
+
+
     onClose?: () => void;
+
+
 
   }) => void;
 
+
+
 }
+
+
+
+
+
+
+
+export interface AdminStats {
+
+
+
+  totalUsers: number;
+
+
+
+  totalProducts: number;
+
+
+
+  totalOrders: number;
+
+
+
+  totalRevenue: number;
+
+
+
+}
+
+
+
+
 
 declare global {
   interface Window {
