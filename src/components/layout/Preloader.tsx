@@ -48,7 +48,7 @@ export function Preloader({ onComplete }: { onComplete: () => void }) {
         className="w-full h-full object-cover pointer-events-none"
         style={{ filter: "brightness(0.9)" }} // Sedikit redup agar transisi ke konten tidak terlalu silau
       >
-        <source src="/animationhero.webm" type="video/webm" />
+        <source src={`${import.meta.env.BASE_URL}animationhero.webm`} type="video/webm" />
       </video>
       
       <button 
