@@ -1,4 +1,4 @@
-import { ShoppingBag, Search, User, Menu, X, Heart, ChevronRight, Calculator, Calendar, CreditCard, Settings, Smile, LogOut, Loader2 } from "lucide-react";
+import { ShoppingBag, Search, User, Menu, X, Heart, ChevronRight, Calculator, Calendar, CreditCard, Settings, Smile, LogOut, Loader2, LayoutDashboard } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -46,6 +46,8 @@ export function Header() {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const navigate = useNavigate();
+
+  const isAdmin = user?.role === 'ADMIN';
 
   // Debounce search query
   useEffect(() => {
@@ -186,6 +188,12 @@ export function Header() {
                       {user?.name || user?.email}
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
+                    {isAdmin && (
+                      <DropdownMenuItem onClick={() => navigate("/admin")}>
+                        <LayoutDashboard className="mr-2 h-4 w-4" />
+                        Admin Dashboard
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuItem onClick={() => navigate("/profile")}>
                       Profile
                     </DropdownMenuItem>
@@ -348,6 +356,16 @@ export function Header() {
               
               {isAuthenticated ? (
                 <>
+                  {isAdmin && (
+                    <Link
+                      to="/admin"
+                      className="flex items-center py-3 px-4 text-primary font-bold hover:bg-accent rounded-md transition-colors"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      <LayoutDashboard className="mr-2 h-5 w-5" />
+                      Admin Dashboard
+                    </Link>
+                  )}
                   <Link
                     to="/profile"
                     className="flex items-center py-3 px-4 text-foreground font-medium hover:bg-accent rounded-md transition-colors"
