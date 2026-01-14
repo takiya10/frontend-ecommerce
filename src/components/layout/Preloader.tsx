@@ -1,18 +1,28 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 
 export function Preloader({ onComplete }: { onComplete: () => void }) {
   const [fadeOut, setFadeOut] = useState(false);
   const [isRemoved, setIsRemoved] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
-    // Memastikan body tidak bisa di-scroll saat loading
     document.body.style.overflow = "hidden";
     
-    // Safety fallback: Jika video gagal load/berhenti, paksa selesai setelah 5 detik
+    // Mencoba memaksakan play via JavaScript untuk mobile
+    if (videoRef.current) {
+      videoRef.current.defaultMuted = true;
+      videoRef.current.muted = true;
+      videoRef.current.play().catch(err => {
+        console.warn("Autoplay blocked, skipping to content...", err);
+        // Jika benar-benar diblokir (misal Mode Hemat Daya), langsung skip ke konten
+        handleVideoEnd();
+      });
+    }
+
     const timer = setTimeout(() => {
       handleVideoEnd();
-    }, 5000);
+    }, 6000);
 
     return () => {
       document.body.style.overflow = "unset";
@@ -21,13 +31,13 @@ export function Preloader({ onComplete }: { onComplete: () => void }) {
   }, []);
 
   const handleVideoEnd = () => {
+    if (fadeOut) return;
     setFadeOut(true);
-    // Beri sinyal ke App bahwa video selesai lebih awal untuk persiapan
     onComplete(); 
     
     setTimeout(() => {
       setIsRemoved(true);
-    }, 1000); // Sesuai durasi durasi transition
+    }, 1000);
   };
 
   if (isRemoved) return null;
@@ -40,15 +50,19 @@ export function Preloader({ onComplete }: { onComplete: () => void }) {
       )}
     >
       <video
+        ref={videoRef}
         autoPlay
         muted
         playsInline
+        webkit-playsinline="true"
         preload="auto"
         onEnded={handleVideoEnd}
+        disablePictureInPicture
         className="w-full h-full object-cover pointer-events-none"
-        style={{ filter: "brightness(0.9)" }} // Sedikit redup agar transisi ke konten tidak terlalu silau
+        style={{ filter: "brightness(0.9)" }}
       >
         <source src={`${import.meta.env.BASE_URL}animationhero.webm`} type="video/webm" />
+        <source src={`${import.meta.env.BASE_URL}animationhero.mp4`} type="video/mp4" />
       </video>
       
       <button 
