@@ -3,59 +3,55 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
+import { fetcher } from "@/lib/api-client";
 import heroImage from "@/assets/hero-image.jpg";
 import lozyHero1 from "@/assets/lozy-hero-1.jpg";
 import lozyHero2 from "@/assets/lozy-hero-2.jpg";
 import lozyHero3 from "@/assets/lozy-hero-3.jpeg";
 import lozyHero4 from "@/assets/lozy-hero-4.jpeg";
 
-const slides = [
+interface Banner {
+  id: number;
+  url: string;
+  title: string;
+  subtitle: string;
+  highlight: string;
+}
+
+const DEFAULT_SLIDES = [
   {
     id: 1,
-    image: heroImage,
+    url: heroImage,
     title: "Januari",
     subtitle: "KICK-OFF",
     highlight: "Sale",
   },
   {
     id: 2,
-    image: lozyHero1,
+    url: lozyHero1,
     title: "New Season",
     subtitle: "ESSENTIAL",
     highlight: "2026",
-  },
-  {
-    id: 3,
-    image: lozyHero2,
-    title: "Exclusive",
-    subtitle: "MODEST",
-    highlight: "Wear",
-  },
-  {
-    id: 4,
-    image: lozyHero3,
-    title: "Limited",
-    subtitle: "ELEGANT",
-    highlight: "Style",
-  },
-  {
-    id: 5,
-    image: lozyHero4,
-    title: "Collection",
-    subtitle: "TIMELESS",
-    highlight: "Look",
   },
 ];
 
 export function HeroSection() {
   const [currentSlide, setCurrentSlide] = useState(0);
 
+  const { data: remoteBanners } = useQuery({
+    queryKey: ['settings', 'hero_banners'],
+    queryFn: () => fetcher<Banner[]>('/settings/hero_banners'),
+  });
+
+  const slides: Banner[] = (remoteBanners && remoteBanners.length > 0 ? remoteBanners : DEFAULT_SLIDES) as Banner[];
+
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % slides.length);
     }, 8000);
     return () => clearInterval(timer);
-  }, []);
+  }, [slides.length]);
 
   const goToSlide = (index: number) => setCurrentSlide(index);
   const nextSlide = () => setCurrentSlide((prev) => (prev + 1) % slides.length);
@@ -73,7 +69,7 @@ export function HeroSection() {
           className="absolute inset-0"
         >
           <img
-            src={slides[currentSlide].image}
+            src={slides[currentSlide].url}
             alt={slides[currentSlide].title}
             className="absolute inset-0 w-full h-full object-cover object-top"
           />

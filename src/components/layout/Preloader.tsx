@@ -1,10 +1,20 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { cn } from "@/lib/utils";
 
 export function Preloader({ onComplete }: { onComplete: () => void }) {
   const [fadeOut, setFadeOut] = useState(false);
   const [isRemoved, setIsRemoved] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+
+  const handleVideoEnd = useCallback(() => {
+    if (fadeOut) return;
+    setFadeOut(true);
+    onComplete(); 
+    
+    setTimeout(() => {
+      setIsRemoved(true);
+    }, 1000);
+  }, [fadeOut, onComplete]);
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -34,17 +44,7 @@ export function Preloader({ onComplete }: { onComplete: () => void }) {
       document.body.style.overflow = "unset";
       clearTimeout(timer);
     };
-  }, []);
-
-  const handleVideoEnd = () => {
-    if (fadeOut) return;
-    setFadeOut(true);
-    onComplete(); 
-    
-    setTimeout(() => {
-      setIsRemoved(true);
-    }, 1000);
-  };
+  }, [handleVideoEnd]);
 
   if (isRemoved) return null;
 

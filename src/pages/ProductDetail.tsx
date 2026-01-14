@@ -43,22 +43,39 @@ export default function ProductDetail() {
   const product = useMemo<Product | null>(() => {
     if (!fetchedProduct) return null;
     
-    const transformedImages = (fetchedProduct.images && Array.isArray(fetchedProduct.images) && fetchedProduct.images.length > 0)
-      ? fetchedProduct.images.map((img: string | ProductImage) => typeof img === 'string' ? img : img.url).filter(Boolean)
-      : PLACEHOLDER_IMAGES;
+    // Extract unique colors from variants
+    const colorVariants = fetchedProduct.variants?.filter(v => v.name.toLowerCase() === 'color') || [];
+    const derivedColors = colorVariants.map(v => ({
+      name: v.value,
+      hex: v.hex || "#8B7355"
+    }));
+
+    // Extract unique sizes from variants
+    const sizeVariants = fetchedProduct.variants?.filter(v => v.name.toLowerCase() === 'size') || [];
+    const derivedSizes = Array.from(new Set(sizeVariants.map(v => v.value)));
+
+    const normalizedImages: ProductImage[] = (fetchedProduct.images || []).map((img: ProductImage | string) => {
+      if (typeof img === 'string') {
+        return {
+          id: Math.random().toString(),
+          url: img,
+          productId: fetchedProduct.id,
+          color: null
+        };
+      }
+      return {
+        id: img.id,
+        url: img.url,
+        productId: img.productId || fetchedProduct.id,
+        color: img.color || null
+      };
+    });
 
     return {
       ...fetchedProduct,
-      images: transformedImages as unknown as ProductImage[], // Temporary cast to match Product interface
-      colors: (fetchedProduct.colors && fetchedProduct.colors.length > 0)
-         ? fetchedProduct.colors
-         : [
-            { name: "Default", hex: "#8B7355" },
-            { name: "Cream", hex: "#F5E6D3" }
-         ],
-      sizes: (fetchedProduct.sizes && fetchedProduct.sizes.length > 0)
-         ? fetchedProduct.sizes
-         : ["S", "M", "L", "XL"],
+      images: normalizedImages,
+      colors: derivedColors.length > 0 ? derivedColors : [{ name: "Default", hex: "#8B7355" }],
+      sizes: derivedSizes.length > 0 ? derivedSizes : ["All Size"],
       originalPrice: (fetchedProduct.price || 0) * 1.1,
       badge: "new"
     } as Product;
@@ -68,6 +85,19 @@ export default function ProductDetail() {
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [selectedColor, setSelectedColor] = useState<ProductColor | null>(null);
   const [quantity, setQuantity] = useState(1);
+
+  // Auto-switch image when color is selected
+  useEffect(() => {
+    if (selectedColor && product?.images) {
+      const colorImageIndex = product.images.findIndex(img => 
+        img.color && img.color.trim().toLowerCase() === selectedColor.name.toLowerCase()
+      );
+      
+      if (colorImageIndex !== -1) {
+        setSelectedImage(colorImageIndex);
+      }
+    }
+  }, [selectedColor, product]);
 
   // Reset local state when product changes
   useEffect(() => {
@@ -205,7 +235,7 @@ export default function ProductDetail() {
               <div className="aspect-[3/4] rounded-lg overflow-hidden bg-muted relative">
                 {product.images && product.images[selectedImage] && (
                   <img
-                    src={typeof product.images[selectedImage] === 'string' ? (product.images[selectedImage] as string) : (product.images[selectedImage] as unknown as ProductImage).url}
+                    src={product.images[selectedImage].url}
                     alt={product.name}
                     className="product-card-image w-full h-full object-cover"
                   />
@@ -217,7 +247,7 @@ export default function ProductDetail() {
                 )}
               </div>
               <div className="flex gap-3 overflow-x-auto pb-2">
-                {product.images?.map((img: string | ProductImage, i: number) => (
+                {product.images?.map((img: ProductImage, i: number) => (
                   <button
                     key={i}
                     onClick={() => setSelectedImage(i)}
@@ -225,7 +255,7 @@ export default function ProductDetail() {
                       selectedImage === i ? "border-primary" : "border-transparent"
                     }`}
                   >
-                    <img src={typeof img === 'string' ? img : img.url} alt="" className="w-full h-full object-cover" />
+                    <img src={img.url} alt="" className="w-full h-full object-cover" />
                   </button>
                 ))}
               </div>

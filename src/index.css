@@ -127,7 +127,14 @@
 
 @layer base {
   * {
-    @apply border-border;
+    border-color: hsl(var(--border));
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+  }
+
+  html, body {
+    @apply overflow-x-hidden; /* Prevent horizontal scrollbars */
+    width: 100%;
   }
 
   body {
@@ -142,6 +149,20 @@
 }
 
 @layer components {
+  /* Custom scrollbar utility */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    @apply bg-muted/50 rounded-full;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-primary/20 rounded-full hover:bg-primary/40 transition-colors;
+  }
+
   /* Announcement bar marquee */
   .marquee {
     animation: marquee 25s linear infinite;

@@ -1,7 +1,8 @@
-import { ShoppingBag, Search, User, Menu, X, Heart, ChevronRight, Calculator, Calendar, CreditCard, Settings, Smile, LogOut, Loader2, LayoutDashboard } from "lucide-react";
+import { ShoppingBag, Search, User, Menu, X, Heart, ChevronRight, Calculator, Calendar, CreditCard, Settings, Smile, LogOut, Loader2, LayoutDashboard, TrendingUp } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { cn, formatPrice } from "@/lib/utils";
 import logoImage from "@/assets/logo.png";
 import { useCart } from "@/contexts/CartContext";
@@ -10,6 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { fetcher } from "@/lib/api-client";
 import { Product } from "@/types";
+import { toast } from "sonner";
 import {
   CommandDialog,
   CommandEmpty,
@@ -41,13 +43,29 @@ export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { cartCount } = useCart();
   const { wishlistCount } = useWishlist();
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, logout, adminUser, isAdminAuthenticated } = useAuth();
   const [openSearch, setOpenSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const navigate = useNavigate();
 
-  const isAdmin = user?.role === 'ADMIN';
+  // Real-time Notification Simulation for Admin
+  useEffect(() => {
+    if (isAdminAuthenticated) {
+      const interval = setInterval(() => {
+        const rand = Math.random();
+        if (rand > 0.9) {
+          toast.info("Sales Insight: A new guest just visited your shop.", {
+            description: "Analytics is tracking in real-time.",
+            icon: <TrendingUp className="h-4 w-4" />,
+          });
+        }
+      }, 40000);
+      return () => clearInterval(interval);
+    }
+  }, [isAdminAuthenticated]);
+
+  const isAdmin = user?.role === 'ADMIN' || isAdminAuthenticated;
 
   // Debounce search query
   useEffect(() => {
@@ -166,6 +184,11 @@ export function Header() {
             </div>
 
             <div className="flex items-center gap-2">
+              {isAdminAuthenticated && (
+                <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20 text-[9px] uppercase tracking-widest px-2 py-0.5 animate-pulse mr-2">
+                  Admin Mode
+                </Badge>
+              )}
               <Button 
                 variant="icon" 
                 size="icon" 
@@ -175,43 +198,71 @@ export function Header() {
                 <Search className="h-5 w-5" />
               </Button>
 
-              {isAuthenticated ? (
+              {(isAuthenticated || isAdminAuthenticated) ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="icon" size="icon" className="text-nav-foreground">
                       <User className="h-5 w-5" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                    <DropdownMenuItem disabled>
-                      {user?.name || user?.email}
-                    </DropdownMenuItem>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuLabel>
+                      <div className="flex flex-col space-y-1">
+                        <p className="text-sm font-medium leading-none">
+                          {isAdminAuthenticated ? adminUser?.name || "Admin" : user?.name || "User"}
+                        </p>
+                        <p className="text-xs leading-none text-muted-foreground">
+                          {isAdminAuthenticated ? adminUser?.email : user?.email}
+                        </p>
+                      </div>
+                    </DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    {isAdmin && (
-                      <DropdownMenuItem onClick={() => navigate("/admin")}>
+                    {isAdminAuthenticated && (
+                      <DropdownMenuItem onClick={() => navigate("/byher-internal-mgmt")}>
+                        <LayoutDashboard className="mr-2 h-4 w-4" />
+                        Admin Dashboard
+                      </DropdownMenuItem>
+                    )}
+                    {!isAdminAuthenticated && user?.role === 'ADMIN' && (
+                      <DropdownMenuItem onClick={() => navigate("/byher-internal-mgmt")}>
                         <LayoutDashboard className="mr-2 h-4 w-4" />
                         Admin Dashboard
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuItem onClick={() => navigate("/profile")}>
+                      <User className="mr-2 h-4 w-4" />
                       Profile
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate("/orders")}>
-                      Orders
+                    <DropdownMenuItem onClick={() => navigate("/profile?tab=orders")}>
+                      <ShoppingBag className="mr-2 h-4 w-4" />
+                      Pesanan Saya
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate("/profile?tab=addresses")}>
+                      <Settings className="mr-2 h-4 w-4" />
+                      Daftar Alamat
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleLogout} className="text-red-500">
-                      Logout
+                    <DropdownMenuItem 
+                      className="text-destructive focus:text-destructive" 
+                      onClick={() => {
+                        logout(isAdminAuthenticated);
+                        navigate("/");
+                      }}
+                    >
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Log out
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
-                <Link to="/login">
-                  <Button variant="icon" size="icon" className="text-nav-foreground">
-                    <User className="h-5 w-5" />
-                  </Button>
-                </Link>
+                <Button 
+                  variant="icon" 
+                  size="icon" 
+                  className="text-nav-foreground"
+                  onClick={() => navigate("/login")}
+                >
+                  <User className="h-5 w-5" />
+                </Button>
               )}
 
               <Link to="/wishlist">
@@ -354,38 +405,59 @@ export function Header() {
                 )}
               </Link>
               
-              {isAuthenticated ? (
-                <>
-                  {isAdmin && (
-                    <Link
-                      to="/admin"
-                      className="flex items-center py-3 px-4 text-primary font-bold hover:bg-accent rounded-md transition-colors"
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      <LayoutDashboard className="mr-2 h-5 w-5" />
-                      Admin Dashboard
-                    </Link>
-                  )}
+            {(isAuthenticated || isAdminAuthenticated) ? (
+              <div className="space-y-4 pt-4 border-t">
+                <div className="px-4">
+                  <p className="text-sm font-medium">{isAdminAuthenticated ? adminUser?.name : user?.name}</p>
+                  <p className="text-xs text-muted-foreground">{isAdminAuthenticated ? adminUser?.email : user?.email}</p>
+                </div>
+                {isAdminAuthenticated && (
                   <Link
-                    to="/profile"
-                    className="flex items-center py-3 px-4 text-foreground font-medium hover:bg-accent rounded-md transition-colors"
+                    to="/byher-internal-mgmt"
+                    className="flex items-center gap-3 px-4 py-2 text-sm font-medium text-primary"
                     onClick={() => setMobileMenuOpen(false)}
                   >
-                    <User className="mr-2 h-5 w-5" />
-                    Profile
+                    <LayoutDashboard className="h-4 w-4" />
+                    Admin Dashboard
                   </Link>
-                  <button
-                    className="w-full flex items-center py-3 px-4 text-red-500 font-medium hover:bg-accent rounded-md transition-colors text-left"
-                    onClick={() => {
-                      handleLogout();
-                      setMobileMenuOpen(false);
-                    }}
-                  >
-                    <LogOut className="mr-2 h-5 w-5" />
-                    Logout
-                  </button>
-                </>
-              ) : (
+                )}
+                <Link
+                  to="/profile"
+                  className="flex items-center gap-3 px-4 py-2 text-sm font-medium"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <User className="h-4 w-4" />
+                  Profile
+                </Link>
+                <Link
+                  to="/profile?tab=orders"
+                  className="flex items-center gap-3 px-4 py-2 text-sm font-medium"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <ShoppingBag className="h-4 w-4" />
+                  Pesanan Saya
+                </Link>
+                <Link
+                  to="/profile?tab=addresses"
+                  className="flex items-center gap-3 px-4 py-2 text-sm font-medium"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <Settings className="h-4 w-4" />
+                  Daftar Alamat
+                </Link>
+                <button
+                  onClick={() => {
+                    logout(isAdminAuthenticated);
+                    setMobileMenuOpen(false);
+                    navigate("/");
+                  }}
+                  className="flex items-center gap-3 px-4 py-2 text-sm font-medium text-destructive w-full text-left"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Log out
+                </button>
+              </div>
+            ) : (
                 <Link
                   to="/login"
                   className="flex items-center py-3 px-4 text-foreground font-medium hover:bg-accent rounded-md transition-colors"

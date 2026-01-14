@@ -1,4 +1,3 @@
-
 const getApiUrl = () => {
   // Priority 1: Environment variable
   const envUrl = import.meta.env.VITE_API_URL;
@@ -13,7 +12,15 @@ const API_URL = getApiUrl();
 console.log("Byher API Client initialized with URL:", API_URL);
 
 export async function fetcher<T>(endpoint: string, options?: RequestInit): Promise<T> {
-  const token = localStorage.getItem('access_token');
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  
+  // Decide which token to use
+  let token = localStorage.getItem('access_token');
+  if (cleanEndpoint.startsWith('/admin') || cleanEndpoint.startsWith('/settings')) {
+    const adminToken = localStorage.getItem('admin_access_token');
+    if (adminToken) token = adminToken;
+  }
+
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(options?.headers as Record<string, string>),
@@ -23,8 +30,6 @@ export async function fetcher<T>(endpoint: string, options?: RequestInit): Promi
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  // Ensure endpoint starts with /
-  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
   const fullUrl = `${API_URL}${cleanEndpoint}`;
 
   try {

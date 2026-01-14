@@ -16,86 +16,106 @@ interface RegisterResponse {
 
 interface AuthContextType {
   user: User | null;
+  adminUser: User | null;
   isAuthenticated: boolean;
+  isAdminAuthenticated: boolean;
   isLoading: boolean;
-  login: (data: Record<string, string>) => Promise<void>;
+  login: (data: Record<string, string>, isAdmin?: boolean) => Promise<void>;
   register: (data: Record<string, string>) => Promise<void>;
-  logout: () => void;
+  logout: (isAdminLogout?: boolean) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [adminUser, setAdminUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check for stored token and user data on mount
-    const token = localStorage.getItem('access_token');
-    const storedUser = localStorage.getItem('user_data');
-    
-    if (token && storedUser) {
-      try {
+    // Check for standard user session
+    try {
+      const token = localStorage.getItem('access_token');
+      const storedUser = localStorage.getItem('user_data');
+      if (token && storedUser && storedUser !== "undefined") {
         setUser(JSON.parse(storedUser));
-      } catch (error) {
-        console.error("Failed to parse stored user data", error);
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('user_data');
       }
+    } catch (e) {
+      console.error("User session corrupt, clearing...");
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('user_data');
     }
+
+    // Check for admin session
+    try {
+      const adminToken = localStorage.getItem('admin_access_token');
+      const storedAdmin = localStorage.getItem('admin_user_data');
+      if (adminToken && storedAdmin && storedAdmin !== "undefined") {
+        setAdminUser(JSON.parse(storedAdmin));
+      }
+    } catch (e) {
+      console.error("Admin session corrupt, clearing...");
+      localStorage.removeItem('admin_access_token');
+      localStorage.removeItem('admin_user_data');
+    }
+
     setIsLoading(false);
   }, []);
 
-  const login = async (data: Record<string, string>) => {
+  const login = async (data: Record<string, string>, isAdminLogin = false) => {
     try {
       const response = await fetcher<LoginResponse>('/auth/login', {
         method: 'POST',
         body: JSON.stringify(data),
       });
 
-      localStorage.setItem('access_token', response.access_token);
-      localStorage.setItem('user_data', JSON.stringify(response.user));
-      setUser(response.user);
+      if (isAdminLogin && response.user.role !== 'ADMIN') {
+        throw new Error("You do not have administrative privileges.");
+      }
+
+      if (response.user.role === 'ADMIN') {
+        localStorage.setItem('admin_access_token', response.access_token);
+        localStorage.setItem('admin_user_data', JSON.stringify(response.user));
+        setAdminUser(response.user);
+      } else {
+        localStorage.setItem('access_token', response.access_token);
+        localStorage.setItem('user_data', JSON.stringify(response.user));
+        setUser(response.user);
+      }
       
       toast.success(response.message);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Login failed";
-      console.error("Login error:", error);
       toast.error(message);
       throw error;
     }
   };
 
-  const register = async (data: Record<string, string>) => {
-    try {
-      const response = await fetcher<RegisterResponse>('/auth/register', {
-        method: 'POST',
-        body: JSON.stringify(data),
-      });
-      
-      toast.success(response.message);
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "Registration failed";
-      console.error("Register error:", error);
-      toast.error(message);
-      throw error;
+  const logout = (isAdminLogout = false) => {
+    if (isAdminLogout) {
+      localStorage.removeItem('admin_access_token');
+      localStorage.removeItem('admin_user_data');
+      setAdminUser(null);
+    } else {
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('user_data');
+      setUser(null);
     }
-  };
-
-  const logout = () => {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('user_data');
-    setUser(null);
     toast.success("Logged out successfully");
   };
 
   return (
     <AuthContext.Provider value={{ 
-      user, 
-      isAuthenticated: !!user, 
+      user: user,
+      adminUser: adminUser,
+      isAuthenticated: !!user,
+      isAdminAuthenticated: !!adminUser,
       isLoading, 
       login, 
-      register, 
+      register: async (data) => {
+        const res = await fetcher<RegisterResponse>('/auth/register', { method: 'POST', body: JSON.stringify(data) });
+        toast.success(res.message);
+      },
       logout 
     }}>
       {children}
