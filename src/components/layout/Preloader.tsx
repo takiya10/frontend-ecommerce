@@ -9,20 +9,26 @@ export function Preloader({ onComplete }: { onComplete: () => void }) {
   useEffect(() => {
     document.body.style.overflow = "hidden";
     
-    // Mencoba memaksakan play via JavaScript untuk mobile
     if (videoRef.current) {
-      videoRef.current.defaultMuted = true;
+      // TRICK UNTUK iOS: Set property secara langsung, jangan cuma lewat atribut JSX
       videoRef.current.muted = true;
-      videoRef.current.play().catch(err => {
-        console.warn("Autoplay blocked, skipping to content...", err);
-        // Jika benar-benar diblokir (misal Mode Hemat Daya), langsung skip ke konten
-        handleVideoEnd();
-      });
+      videoRef.current.defaultMuted = true;
+      
+      const playPromise = videoRef.current.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(() => {
+          // Autoplay diblokir (biasanya karena Mode Hemat Daya)
+          console.warn("Autoplay blocked by browser policy (likely Low Power Mode)");
+          // Opsional: Jika diblokir, kita bisa langsung skip agar user tidak stuck di layar hitam
+          // handleVideoEnd(); 
+        });
+      }
     }
 
+    // Safety fallback: Jika video macet/blokir, buka website setelah 4 detik
     const timer = setTimeout(() => {
       handleVideoEnd();
-    }, 6000);
+    }, 4500);
 
     return () => {
       document.body.style.overflow = "unset";
@@ -60,9 +66,11 @@ export function Preloader({ onComplete }: { onComplete: () => void }) {
         disablePictureInPicture
         className="w-full h-full object-cover pointer-events-none"
         style={{ filter: "brightness(0.9)" }}
+        /* Tambahkan onCanPlay sebagai pemicu tambahan */
+        onCanPlay={(e) => (e.currentTarget.muted = true)}
       >
-        <source src={`${import.meta.env.BASE_URL}animationhero.webm`} type="video/webm" />
         <source src={`${import.meta.env.BASE_URL}animationhero.mp4`} type="video/mp4" />
+        <source src={`${import.meta.env.BASE_URL}animationhero.webm`} type="video/webm" />
       </video>
       
       <button 
