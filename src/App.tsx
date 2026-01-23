@@ -2,13 +2,14 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { CartProvider } from "@/contexts/CartContext";
 import { WishlistProvider } from "@/contexts/WishlistContext";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { lazy, Suspense } from "react";
 import { fetcher } from "@/lib/api-client";
 import ScrollToTop from "@/components/layout/ScrollToTop";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 
 // Lazy Pages
 const Index = lazy(() => import("./pages/Index"));
@@ -48,7 +49,8 @@ const DEFAULT_SITE_INFO: SiteSettingsData = {
 
 const AppContent = () => {
   const { user, adminUser, isAdminAuthenticated } = useAuth();
-  
+  const location = useLocation();
+
   const { data: siteInfo } = useQuery({
     queryKey: ['settings', 'site_info'],
     queryFn: () => fetcher<SiteSettingsData>('/settings/site_info').catch(() => DEFAULT_SITE_INFO),
@@ -56,7 +58,10 @@ const AppContent = () => {
   });
 
   const isUserAdmin = user?.role === 'ADMIN' || isAdminAuthenticated;
-  const showMaintenance = siteInfo?.maintenanceMode && !isUserAdmin;
+  const isAdminRoute = location.pathname.startsWith('/byher-internal-mgmt');
+
+  // Don't show maintenance mode if user is admin OR if we are on an admin route (like login)
+  const showMaintenance = siteInfo?.maintenanceMode && !isUserAdmin && !isAdminRoute;
 
   if (showMaintenance) {
     return (
@@ -80,11 +85,18 @@ const AppContent = () => {
         <Route path="/profile" element={<Profile />} />
         <Route path="/orders" element={<Profile />} />
         <Route path="/order-status" element={<OrderStatus />} />
-        
+
         {/* Admin Routes */}
         <Route path="/byher-internal-mgmt/login" element={<Login isAdminPage={true} />} />
-        <Route path="/byher-internal-mgmt" element={<AdminDashboard />} />
-        
+        <Route
+          path="/byher-internal-mgmt"
+          element={
+            <ProtectedRoute requireAdmin={true}>
+              <AdminDashboard />
+            </ProtectedRoute>
+          }
+        />
+
         <Route path="/pages/:slug" element={<StaticPage />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
@@ -101,7 +113,7 @@ const App = () => {
             <TooltipProvider>
               <Toaster />
               <Sonner />
-              <BrowserRouter 
+              <BrowserRouter
                 basename={import.meta.env.BASE_URL}
                 future={{
                   v7_startTransition: true,

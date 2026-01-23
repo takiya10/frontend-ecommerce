@@ -3,6 +3,7 @@ export interface User {
   email: string;
   name: string | null;
   role?: string;
+  isActive?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -50,12 +51,12 @@ export interface Product {
   variants?: ProductVariant[];
   createdAt?: string;
   updatedAt?: string;
-  
+
   // Frontend UI specific (compatible with older code)
   image?: string;
   inStock?: boolean;
   badge?: "sale" | "new" | "soldout" | "bestseller";
-  colors?: ProductColor[]; 
+  colors?: ProductColor[];
   sizes?: string[];
   originalPrice?: number;
 }

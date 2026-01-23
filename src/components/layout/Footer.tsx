@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Instagram, Mail, Phone, MapPin } from "lucide-react";
 import logoImage from "@/assets/logo.png";
+import { useSiteSettings, DEFAULT_SITE_SETTINGS } from "@/hooks/useSiteSettings";
 
 const footerLinks = {
   shop: [
@@ -27,6 +28,9 @@ const footerLinks = {
 };
 
 export function Footer() {
+  const { data: settings } = useSiteSettings();
+  const config = settings || DEFAULT_SITE_SETTINGS;
+
   return (
     <footer className="bg-primary text-primary-foreground">
       <div className="container mx-auto py-12 lg:py-16">
@@ -34,17 +38,18 @@ export function Footer() {
           {/* Brand */}
           <div className="col-span-2 md:col-span-1">
             <Link to="/" className="inline-block">
-              <img src={logoImage} alt="Byher" className="h-14 brightness-0 invert" />
+              <img src={logoImage} alt={config.siteName} className="h-14 brightness-0 invert" />
             </Link>
             <p className="mt-4 text-sm text-primary-foreground/80 leading-relaxed">
-              Modest fashion terbaik untuk wanita Indonesia. Kualitas premium dengan harga terjangkau.
+              {config.siteDescription || DEFAULT_SITE_SETTINGS.siteDescription}
             </p>
             <div className="mt-6 flex gap-4">
               <a
-                href="https://instagram.com"
+                href={`https://instagram.com/${config.instagramUrl.replace('@', '')}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-primary-foreground/80 hover:text-primary-foreground transition-colors"
+                title="Instagram"
               >
                 <Instagram className="h-5 w-5" />
               </a>
@@ -91,11 +96,11 @@ export function Footer() {
             <ul className="space-y-3">
               <li className="flex items-start gap-3 text-sm text-primary-foreground/80">
                 <Phone className="h-4 w-4 mt-0.5 shrink-0" />
-                <span>+62 812-3456-7890</span>
+                <span>{config.whatsappNumber}</span>
               </li>
               <li className="flex items-start gap-3 text-sm text-primary-foreground/80">
                 <Mail className="h-4 w-4 mt-0.5 shrink-0" />
-                <span>hello@byher.id</span>
+                <span>{config.contactEmail}</span>
               </li>
               <li className="flex items-start gap-3 text-sm text-primary-foreground/80">
                 <MapPin className="h-4 w-4 mt-0.5 shrink-0" />
@@ -108,7 +113,7 @@ export function Footer() {
         {/* Bottom */}
         <div className="mt-12 pt-8 border-t border-primary-foreground/20 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-xs text-primary-foreground/60">
-            © {new Date().getFullYear()} Byher. All rights reserved.
+            © {new Date().getFullYear()} {config.siteName}. All rights reserved.
           </p>
           <div className="flex items-center gap-4">
             <img src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg" alt="Visa" className="h-6 opacity-60" />

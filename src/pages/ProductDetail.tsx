@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { ChevronRight, Minus, Plus, Heart, Share2, Truck, RotateCcw, Shield } from "lucide-react";
+import { ChevronRight, Minus, Plus, Heart, Share2, Truck, RotateCcw, Shield, Check } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
@@ -26,7 +26,7 @@ export default function ProductDetail() {
   const navigate = useNavigate();
   const { addItem } = useCart();
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
-  
+
   const { data: fetchedProduct, isLoading, error } = useQuery({
     queryKey: ['product', slug],
     queryFn: () => fetcher<Product>(`/products/${slug}`),
@@ -42,7 +42,7 @@ export default function ProductDetail() {
 
   const product = useMemo<Product | null>(() => {
     if (!fetchedProduct) return null;
-    
+
     // Extract unique colors from variants
     const colorVariants = fetchedProduct.variants?.filter(v => v.name.toLowerCase() === 'color') || [];
     const derivedColors = colorVariants.map(v => ({
@@ -89,10 +89,10 @@ export default function ProductDetail() {
   // Auto-switch image when color is selected
   useEffect(() => {
     if (selectedColor && product?.images) {
-      const colorImageIndex = product.images.findIndex(img => 
+      const colorImageIndex = product.images.findIndex(img =>
         img.color && img.color.trim().toLowerCase() === selectedColor.name.toLowerCase()
       );
-      
+
       if (colorImageIndex !== -1) {
         setSelectedImage(colorImageIndex);
       }
@@ -140,14 +140,14 @@ export default function ProductDetail() {
     }
 
     addItem({
-        productId: product.id,
-        name: product.name,
-        slug: product.slug,
-        price: product.price,
-        image: typeof product.images?.[0] === 'string' ? (product.images[0] as string) : (product.images?.[0] as unknown as ProductImage)?.url || PLACEHOLDER_IMAGES[0],
-        size: selectedSize,
-        color: selectedColor?.name || "Default",
-        quantity: quantity
+      productId: product.id,
+      name: product.name,
+      slug: product.slug,
+      price: product.price,
+      image: typeof product.images?.[0] === 'string' ? (product.images[0] as string) : (product.images?.[0] as unknown as ProductImage)?.url || PLACEHOLDER_IMAGES[0],
+      size: selectedSize,
+      color: selectedColor?.name || "Default",
+      quantity: quantity
     });
   };
 
@@ -157,32 +157,32 @@ export default function ProductDetail() {
       toast.error("Silakan pilih ukuran terlebih dahulu");
       return;
     }
-    
+
     addItem({
-        productId: product.id,
-        name: product.name,
-        slug: product.slug,
-        price: product.price,
-        image: typeof product.images?.[0] === 'string' ? (product.images[0] as string) : (product.images?.[0] as unknown as ProductImage)?.url || PLACEHOLDER_IMAGES[0],
-        size: selectedSize,
-        color: selectedColor?.name || "Default",
-        quantity: quantity
+      productId: product.id,
+      name: product.name,
+      slug: product.slug,
+      price: product.price,
+      image: typeof product.images?.[0] === 'string' ? (product.images[0] as string) : (product.images?.[0] as unknown as ProductImage)?.url || PLACEHOLDER_IMAGES[0],
+      size: selectedSize,
+      color: selectedColor?.name || "Default",
+      quantity: quantity
     });
-    
+
     navigate("/checkout");
   };
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex flex-col">
+      <div className="min-h-screen flex flex-col bg-background">
         <Header />
-        <main className="flex-1 container mx-auto py-12 px-4">
-          <div className="grid md:grid-cols-2 gap-8">
-            <Skeleton className="aspect-[3/4] w-full rounded-lg" />
-            <div className="space-y-4">
+        <main className="flex-1 container mx-auto py-12 px-6">
+          <div className="grid md:grid-cols-2 gap-12">
+            <Skeleton className="aspect-[3/4] w-full rounded-xl" />
+            <div className="space-y-6 pt-8">
               <Skeleton className="h-10 w-3/4" />
               <Skeleton className="h-6 w-1/4" />
-              <Skeleton className="h-32 w-full" />
+              <Skeleton className="h-40 w-full" />
             </div>
           </div>
         </main>
@@ -193,14 +193,16 @@ export default function ProductDetail() {
 
   if (error || !product) {
     return (
-       <div className="min-h-screen flex flex-col">
+      <div className="min-h-screen flex flex-col">
         <Header />
-        <main className="flex-1 container mx-auto py-12 text-center px-4">
-          <h2 className="text-2xl font-bold text-red-500">Produk tidak ditemukan</h2>
-          <p className="text-muted-foreground mt-2">Maaf, produk yang Anda cari tidak tersedia atau telah dihapus.</p>
-          <Link to="/">
-             <Button className="mt-6">Kembali ke Beranda</Button>
-          </Link>
+        <main className="flex-1 container mx-auto py-24 text-center px-4">
+          <div className="max-w-md mx-auto space-y-4">
+            <h2 className="text-3xl font-serif text-foreground">Produk Tidak Ditemukan</h2>
+            <p className="text-muted-foreground">Maaf, produk yang Anda cari mungkin sudah tidak tersedia.</p>
+            <Link to="/">
+              <Button className="mt-4 px-8 rounded-full">Kembali ke Beranda</Button>
+            </Link>
+          </div>
         </main>
         <Footer />
       </div>
@@ -208,52 +210,66 @@ export default function ProductDetail() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col" key={slug}>
+    <div className="min-h-screen flex flex-col bg-background animate-fade-in" key={slug}>
       <Header />
 
       <main className="flex-1">
-        {/* Breadcrumb */}
-        <nav className="container mx-auto py-4 px-4 lg:px-0">
-          <ol className="flex items-center gap-2 text-sm text-muted-foreground">
-            <li><Link to="/" className="hover:text-foreground">Home</Link></li>
-            <ChevronRight className="h-4 w-4" />
-            <li>
-                <Link to={`/collections/${product.category?.slug || 'all'}`} className="hover:text-foreground">
-                    {product.category?.name || 'Koleksi'}
+        {/* Breadcrumb - Clean & Minimal */}
+        <div className="border-b border-border/40">
+          <nav className="container mx-auto py-4 px-6">
+            <ol className="flex items-center gap-2 text-xs uppercase tracking-widest text-muted-foreground font-medium">
+              <li><Link to="/" className="hover:text-primary transition-colors">Home</Link></li>
+              <ChevronRight className="h-3 w-3" />
+              <li>
+                <Link to={`/collections/${product.category?.slug || 'all'}`} className="hover:text-primary transition-colors">
+                  {product.category?.name || 'Koleksi'}
                 </Link>
-            </li>
-            <ChevronRight className="h-4 w-4" />
-            <li className="text-foreground truncate max-w-[200px]">{product.name}</li>
-          </ol>
-        </nav>
+              </li>
+              <ChevronRight className="h-3 w-3" />
+              <li className="text-foreground truncate max-w-[150px]">{product.name}</li>
+            </ol>
+          </nav>
+        </div>
 
-        {/* Product Section */}
-        <section className="container mx-auto pb-16 px-4 lg:px-0">
-          <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
-            {/* Images */}
-            <div className="space-y-4">
-              <div className="aspect-[3/4] rounded-lg overflow-hidden bg-muted relative">
+        <section className="container mx-auto px-0 lg:px-6">
+          <div className="lg:grid lg:grid-cols-12 lg:gap-16 pt-6 pb-20">
+
+            {/* Sticky Images Section (Left, 7 Cols) */}
+            <div className="lg:col-span-7 space-y-4 lg:sticky lg:top-24 lg:h-fit">
+              <div className="relative overflow-hidden bg-muted/20 lg:rounded-2xl w-full">
+                {/* Main Image with constrained height for "Balanced Look" */}
                 {product.images && product.images[selectedImage] && (
-                  <img
-                    src={product.images[selectedImage].url}
-                    alt={product.name}
-                    className="product-card-image w-full h-full object-cover"
-                  />
+                  <div className="relative aspect-[3/4] lg:aspect-auto lg:h-[80vh] w-full">
+                    <img
+                      src={product.images[selectedImage].url}
+                      alt={product.name}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
                 )}
+
+                {/* Floating Badge */}
                 {product.badge && (
-                  <Badge variant={product.badge} className="absolute top-4 left-4">
-                    {discount}% OFF
-                  </Badge>
+                  <div className="absolute top-6 left-6">
+                    <Badge className="backdrop-blur-md bg-white/80 text-foreground border-white/20 px-3 py-1 font-sans font-bold tracking-wider shadow-sm">
+                      {product.badge === 'sale' ? `${discount}% OFF` : product.badge?.replace('-', ' ').toUpperCase()}
+                    </Badge>
+                  </div>
                 )}
               </div>
-              <div className="flex gap-3 overflow-x-auto pb-2">
+
+              {/* Thumbnails */}
+              <div className="flex gap-3 overflow-x-auto px-4 lg:px-0 pb-2 scrollbar-hide">
                 {product.images?.map((img: ProductImage, i: number) => (
                   <button
                     key={i}
                     onClick={() => setSelectedImage(i)}
-                    className={`shrink-0 w-20 h-24 rounded-md overflow-hidden border-2 transition-colors ${
-                      selectedImage === i ? "border-primary" : "border-transparent"
-                    }`}
+                    className={cn(
+                      "shrink-0 w-20 h-24 lg:w-24 lg:h-32 rounded-lg overflow-hidden border-2 transition-all duration-300",
+                      selectedImage === i
+                        ? "border-primary opacity-100 ring-2 ring-primary/10"
+                        : "border-transparent opacity-60 hover:opacity-100"
+                    )}
                   >
                     <img src={img.url} alt="" className="w-full h-full object-cover" />
                   </button>
@@ -261,40 +277,42 @@ export default function ProductDetail() {
               </div>
             </div>
 
-            {/* Product Info */}
-            <div className="space-y-6">
-              <div>
-                <h1 className="font-serif text-2xl md:text-3xl text-foreground mb-3">
+            {/* Product Details Section (Right, 5 Cols) */}
+            <div className="lg:col-span-5 px-6 lg:px-0 pt-8 lg:pt-0 space-y-8">
+
+              {/* Header Info */}
+              <div className="space-y-4 border-b border-border/50 pb-6">
+                <h1 className="font-serif text-4xl lg:text-5xl text-foreground font-medium leading-tight">
                   {product.name}
                 </h1>
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl font-bold text-foreground">
+                <div className="flex items-baseline gap-4">
+                  <span className="text-2xl font-sans font-semibold text-foreground tracking-tight">
                     {formatPrice(product.price)}
                   </span>
                   {product.originalPrice && (
-                    <>
-                      <span className="text-lg text-muted-foreground line-through">
-                        {formatPrice(product.originalPrice)}
-                      </span>
-                      <Badge variant="sale">{discount}% OFF</Badge>
-                    </>
+                    <span className="text-lg text-muted-foreground line-through decoration-zinc-400">
+                      {formatPrice(product.originalPrice)}
+                    </span>
                   )}
                 </div>
               </div>
 
               {/* Color Selection */}
-              <div>
-                <h3 className="font-medium mb-3">Warna: {selectedColor?.name || ""}</h3>
+              <div className="space-y-3">
+                <span className="text-xs uppercase font-bold tracking-widest text-muted-foreground">
+                  Color: <span className="text-foreground">{selectedColor?.name}</span>
+                </span>
                 <div className="flex gap-3">
                   {product.colors?.map((color: ProductColor) => (
                     <button
                       key={color.hex}
                       onClick={() => setSelectedColor(color)}
-                      className={`w-10 h-10 rounded-full border-2 transition-all ${
+                      className={cn(
+                        "w-10 h-10 rounded-full border transition-all duration-300 relative",
                         selectedColor?.hex === color.hex
-                          ? "border-primary ring-2 ring-primary/20"
-                          : "border-border hover:border-primary/50"
-                      }`}
+                          ? "ring-1 ring-offset-2 ring-foreground border-transparent"
+                          : "border-border/50 hover:border-foreground/50"
+                      )}
                       style={{ backgroundColor: color.hex }}
                       title={color.name}
                     />
@@ -303,23 +321,22 @@ export default function ProductDetail() {
               </div>
 
               {/* Size Selection */}
-              <div>
-                <div className="flex justify-between items-center mb-3">
-                  <h3 className="font-medium">Ukuran</h3>
-                  <button className="text-sm text-primary hover:underline">
-                    Panduan Ukuran
-                  </button>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs uppercase font-bold tracking-widest text-muted-foreground">Size</span>
+                  <button className="text-xs underline text-muted-foreground hover:text-foreground transition-colors">Size Guide</button>
                 </div>
-                <div className="flex gap-3 flex-wrap">
+                <div className="grid grid-cols-4 gap-2">
                   {product.sizes?.map((size: string) => (
                     <button
                       key={size}
                       onClick={() => setSelectedSize(size)}
-                      className={`px-6 py-3 rounded-md border-2 font-medium transition-all ${
+                      className={cn(
+                        "h-12 rounded-lg border text-sm font-medium transition-all duration-200",
                         selectedSize === size
-                          ? "border-primary bg-primary text-primary-foreground"
-                          : "border-border hover:border-primary"
-                      }`}
+                          ? "border-foreground bg-foreground text-background shadow-md"
+                          : "border-border hover:border-foreground/50 bg-transparent text-foreground"
+                      )}
                     >
                       {size}
                     </button>
@@ -327,102 +344,112 @@ export default function ProductDetail() {
                 </div>
               </div>
 
-              {/* Quantity */}
-              <div>
-                <h3 className="font-medium mb-3">Jumlah</h3>
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center border border-border rounded-md">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                      disabled={quantity <= 1}
-                    >
-                      <Minus className="h-4 w-4" />
-                    </Button>
-                    <span className="w-12 text-center font-medium">{quantity}</span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setQuantity(Math.min(product.stock, quantity + 1))}
-                      disabled={quantity >= product.stock}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <span className="text-sm text-muted-foreground">
-                    Stok: {product.stock ?? 0}
-                  </span>
-                </div>
-              </div>
-
               {/* Actions */}
-              <div className="flex gap-3 pt-4">
-                <Button variant="cart" size="lg" className="flex-1" onClick={handleAddToCart} disabled={product.stock === 0}>
-                  {product.stock === 0 ? "Habis" : "Tambah ke Keranjang"}
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="lg" 
-                  className={cn(
-                    "border border-border",
-                    inWishlist && "text-red-500 hover:text-red-600 border-red-200 bg-red-50"
-                  )}
-                  onClick={handleToggleWishlist}
-                >
-                  <Heart className={cn("h-5 w-5", inWishlist && "fill-current")} />
-                </Button>
-                <Button variant="ghost" size="lg" className="border border-border">
-                  <Share2 className="h-5 w-5" />
-                </Button>
+              <div className="space-y-4 pt-4">
+                <div className="flex gap-4 p-4 border rounded-xl bg-muted/30">
+                  <span className="text-sm font-medium text-muted-foreground self-center">Quantity</span>
+                  <div className="flex items-center gap-4 ml-auto">
+                    <button
+                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                      className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white transition-colors"
+                    >
+                      <Minus className="h-3 w-3" />
+                    </button>
+                    <span className="w-4 text-center font-medium">{quantity}</span>
+                    <button
+                      onClick={() => setQuantity(Math.min(product.stock, quantity + 1))}
+                      className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white transition-colors"
+                    >
+                      <Plus className="h-3 w-3" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <Button
+                    variant="default"
+                    size="xl"
+                    className="flex-1 rounded-full text-base font-medium h-14"
+                    onClick={handleAddToCart}
+                    disabled={product.stock === 0}
+                  >
+                    {product.stock === 0 ? "Out of Stock" : "Add to Cart - " + formatPrice(product.price * quantity)}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className={cn(
+                      "h-14 w-14 rounded-full border-border hover:border-red-200 hover:bg-red-50 hover:text-red-500 transition-colors",
+                      inWishlist && "text-red-500 bg-red-50 border-red-200"
+                    )}
+                    onClick={handleToggleWishlist}
+                  >
+                    <Heart className={cn("h-6 w-6", inWishlist && "fill-current")} />
+                  </Button>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4 pt-6 text-center">
+                  <div className="space-y-2">
+                    <div className="w-10 h-10 mx-auto rounded-full bg-muted/50 flex items-center justify-center">
+                      <Truck className="h-4 w-4 text-foreground" />
+                    </div>
+                    <p className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">Free Shipping</p>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="w-10 h-10 mx-auto rounded-full bg-muted/50 flex items-center justify-center">
+                      <RotateCcw className="h-4 w-4 text-foreground" />
+                    </div>
+                    <p className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">Free Returns</p>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="w-10 h-10 mx-auto rounded-full bg-muted/50 flex items-center justify-center">
+                      <Shield className="h-4 w-4 text-foreground" />
+                    </div>
+                    <p className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">Secure Pay</p>
+                  </div>
+                </div>
               </div>
 
-              <Button variant="hero" size="lg" className="w-full" onClick={handleBuyNow} disabled={product.stock === 0}>
-                Beli Sekarang
-              </Button>
+              {/* Description Tabs style */}
+              <div className="pt-8 border-t border-border">
+                <div className="space-y-4">
+                  <h3 className="font-serif text-xl border-l-4 border-primary pl-4">Product Details</h3>
+                  <div className="prose prose-sm text-muted-foreground max-w-none leading-relaxed">
+                    <p>{product.description || "No description available."}</p>
 
-              {/* Features */}
-              <div className="grid grid-cols-3 gap-4 pt-6 border-t border-border">
-                <div className="text-center">
-                  <Truck className="h-5 w-5 mx-auto mb-2 text-muted-foreground" />
-                  <p className="text-xs text-muted-foreground">Gratis Ongkir</p>
+                    <ul className="list-disc pl-5 space-y-1 pt-4">
+                      <li>Premium material quality</li>
+                      <li>Designed for comfort and style</li>
+                      <li>Authentic Byher design</li>
+                    </ul>
+                  </div>
                 </div>
-                <div className="text-center">
-                  <RotateCcw className="h-5 w-5 mx-auto mb-2 text-muted-foreground" />
-                  <p className="text-xs text-muted-foreground">30 Hari Retur</p>
-                </div>
-                <div className="text-center">
-                  <Shield className="h-5 w-5 mx-auto mb-2 text-muted-foreground" />
-                  <p className="text-xs text-muted-foreground">Pembayaran Aman</p>
-                </div>
-              </div>
-
-              {/* Description */}
-              <div className="pt-6 border-t border-border">
-                <h3 className="font-medium mb-3">Deskripsi</h3>
-                <p className="text-muted-foreground whitespace-pre-line text-sm leading-relaxed">
-                  {product.description || "No description available."}
-                </p>
               </div>
             </div>
           </div>
         </section>
 
-        {/* Related Products */}
-        <section className="py-12 lg:py-16">
-          <div className="container mx-auto px-4 lg:px-0">
-            <h2 className="font-serif text-3xl md:text-4xl text-foreground mb-8">
-              Produk Terkait
-            </h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-              {relatedProducts?.map((item: Product) => (
-                <ProductCard 
-                  key={item.id} 
-                  product={item} 
+        {/* Related Products - Modern Grid */}
+        <section className="py-20 bg-muted/10 border-t border-border/20">
+          <div className="container mx-auto px-6">
+            <div className="flex items-center justify-between mb-12">
+              <h2 className="font-serif text-3xl md:text-4xl text-foreground">
+                You May Also Like
+              </h2>
+              <Link to="/collections/all">
+                <Button variant="link" className="text-foreground tracking-widest uppercase text-xs font-bold">View All</Button>
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-12">
+              {relatedProducts?.slice(0, 4).map((item: Product) => (
+                <ProductCard
+                  key={item.id}
+                  product={item}
                 />
               ))}
               {(!relatedProducts || relatedProducts.length === 0) && (
-                <p className="col-span-full text-muted-foreground text-center">Tidak ada produk terkait.</p>
+                <p className="col-span-full text-muted-foreground text-center italic">No related products found.</p>
               )}
             </div>
           </div>

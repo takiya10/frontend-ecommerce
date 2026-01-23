@@ -13,7 +13,7 @@ console.log("Byher API Client initialized with URL:", API_URL);
 
 export async function fetcher<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-  
+
   // Decide which token to use
   let token = localStorage.getItem('access_token');
   if (cleanEndpoint.startsWith('/admin') || cleanEndpoint.startsWith('/settings')) {
@@ -25,6 +25,11 @@ export async function fetcher<T>(endpoint: string, options?: RequestInit): Promi
     'Content-Type': 'application/json',
     ...(options?.headers as Record<string, string>),
   };
+
+  // If body is FormData, let browser set Content-Type with boundary
+  if (options?.body instanceof FormData) {
+    delete headers['Content-Type'];
+  }
 
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
@@ -39,6 +44,26 @@ export async function fetcher<T>(endpoint: string, options?: RequestInit): Promi
     });
 
     if (!res.ok) {
+      // Global 401 Interceptor: Auto-logout if token is invalid/expired
+      if (res.status === 401) {
+        console.warn("Unauthorized access detected. Clearing session.");
+
+        // Determine context based on endpoint to clear correct session
+        if (cleanEndpoint.startsWith('/admin') || cleanEndpoint.startsWith('/settings') || cleanEndpoint.startsWith('/upload')) {
+          localStorage.removeItem('admin_access_token');
+          localStorage.removeItem('admin_user_data');
+          // Optional: Redirect to admin login if strictly needed, 
+          // but often allowing the UI to react to the cleared token is smoother.
+          // window.location.href = '/byher-internal-mgmt/login';
+        } else {
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('user_data');
+          // window.location.href = '/login';
+        }
+
+        // We still throw the error so the UI component knows the request failed
+      }
+
       const errorData = await res.json().catch(() => ({}));
       throw new Error(errorData.message || `API Error: ${res.status} ${res.statusText}`);
     }

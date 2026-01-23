@@ -19,7 +19,7 @@ const buttonVariants = cva(
         hero: "bg-warm-brown text-primary-foreground font-semibold shadow-lg hover:shadow-xl hover:bg-warm-brown/90 active:scale-[0.98] px-8 py-3",
         sale: "bg-sale text-sale-foreground font-semibold shadow-md hover:bg-sale/90 active:scale-[0.98]",
         promo: "bg-dusty-pink text-warm-brown font-medium shadow-sm hover:bg-dusty-pink/80",
-        cart: "bg-primary text-primary-foreground font-semibold shadow-md hover:shadow-lg hover:bg-primary/90 active:scale-[0.98] w-full",
+        cart: "bg-primary text-primary-foreground font-semibold shadow-md hover:shadow-lg hover:bg-primary/90 w-full",
         nav: "text-nav-foreground hover:bg-nav-foreground/10 font-medium tracking-wide uppercase text-xs",
         icon: "bg-transparent hover:bg-accent rounded-full p-2",
       },
@@ -40,7 +40,7 @@ const buttonVariants = cva(
 
 export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {
+  VariantProps<typeof buttonVariants> {
   asChild?: boolean;
 }
 

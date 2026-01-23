@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate, Navigate } from "react-router-dom";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,13 +19,32 @@ export default function Login({ isAdminPage = false }: LoginProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const { login } = useAuth();
+  const { login, isAuthenticated, isAdminAuthenticated, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
+
+  // HARD REDIRECT: Immediate check before rendering any UI
+  if (!authLoading) {
+    if (isAdminPage && isAdminAuthenticated) {
+      return <Navigate to="/byher-internal-mgmt" replace />;
+    }
+    if (!isAdminPage && isAuthenticated) {
+      return <Navigate to="/" replace />;
+    }
+  }
+
+  // Fallback loader (though authLoading should be false due to sync init)
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
+
     try {
       await login({ email, password }, isAdminPage);
       if (isAdminPage) {
@@ -46,7 +65,7 @@ export default function Login({ isAdminPage = false }: LoginProps) {
       isAdminPage && "bg-muted/50"
     )}>
       {!isAdminPage && <Header />}
-      
+
       <main className="flex-1 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
         <Card className="w-full max-w-md shadow-lg border-border">
           <CardHeader className="space-y-1">
@@ -54,8 +73,8 @@ export default function Login({ isAdminPage = false }: LoginProps) {
               {isAdminPage ? "Admin Portal" : "Welcome back"}
             </CardTitle>
             <CardDescription className="text-center">
-              {isAdminPage 
-                ? "Secure access for Byher internal management" 
+              {isAdminPage
+                ? "Secure access for Byher internal management"
                 : "Enter your credentials to access your account"
               }
             </CardDescription>
@@ -64,11 +83,11 @@ export default function Login({ isAdminPage = false }: LoginProps) {
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
-                <Input 
-                  id="email" 
-                  type="email" 
-                  placeholder="Email" 
-                  required 
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="Email"
+                  required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
@@ -77,8 +96,8 @@ export default function Login({ isAdminPage = false }: LoginProps) {
                 <div className="flex items-center justify-between">
                   <Label htmlFor="password">Password</Label>
                   {!isAdminPage && (
-                    <Link 
-                      to="/forgot-password" 
+                    <Link
+                      to="/forgot-password"
                       className="text-sm font-medium text-primary hover:underline"
                     >
                       Forgot password?
@@ -86,11 +105,11 @@ export default function Login({ isAdminPage = false }: LoginProps) {
                   )}
                 </div>
                 <div className="relative">
-                  <Input 
-                    id="password" 
-                    type={showPassword ? "text" : "password"} 
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
                     placeholder="Password"
-                    required 
+                    required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                   />
