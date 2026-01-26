@@ -26,6 +26,10 @@ const OrderStatus = lazy(() => import("./pages/OrderStatus"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const StaticPage = lazy(() => import("./pages/StaticPage"));
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
+
+const SearchResults = lazy(() => import("./pages/SearchResults"));
+const AccountSettings = lazy(() => import("./pages/AccountSettings"));
 
 const queryClient = new QueryClient();
 
@@ -80,9 +84,12 @@ const AppContent = () => {
         <Route path="/cart" element={<Cart />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/search" element={<SearchResults />} />
         <Route path="/checkout" element={<Checkout />} />
         <Route path="/wishlist" element={<Wishlist />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/settings" element={<AccountSettings />} />
         <Route path="/orders" element={<Profile />} />
         <Route path="/order-status" element={<OrderStatus />} />
 

@@ -6,8 +6,8 @@ import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { AdminStats, Product, Category, Order, User } from "@/types";
 
-// Import new sub-components
-import { AdminSidebar } from "@/components/admin/AdminSidebar";
+// Import components
+import { AdminSidebar, AdminNav } from "@/components/admin/AdminSidebar";
 import { AdminHeader } from "@/components/admin/AdminHeader";
 import { AdminOverview } from "@/components/admin/AdminOverview";
 import { AdminProducts } from "@/components/admin/AdminProducts";
@@ -15,12 +15,14 @@ import { AdminOrders } from "@/components/admin/AdminOrders";
 import { AdminCustomers } from "@/components/admin/AdminCustomers";
 import { AdminCMS } from "@/components/admin/AdminCMS";
 import { AdminSettings } from "@/components/admin/AdminSettings";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 
 export default function AdminDashboard() {
   const { adminUser, isAdminAuthenticated, isLoading: authLoading, logout } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("overview");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Auth Guard
   useEffect(() => {
@@ -67,7 +69,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-background flex">
-      {/* SIDEBAR */}
+      {/* DESKTOP SIDEBAR - Hidden on mobile */}
       <AdminSidebar
         isOpen={isSidebarOpen}
         setIsOpen={setIsSidebarOpen}
@@ -76,13 +78,29 @@ export default function AdminDashboard() {
         logout={logout}
       />
 
+      {/* MOBILE SIDEBAR DRAWER */}
+      <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+        <SheetContent side="left" className="p-0 w-72 bg-[#0F172A] border-r-0 text-white">
+          <AdminNav
+            isOpen={true}
+            activeTab={activeTab}
+            setActiveTab={(tab) => { setActiveTab(tab); setMobileMenuOpen(false); }}
+            logout={logout}
+          />
+        </SheetContent>
+      </Sheet>
+
       {/* MAIN CONTENT */}
-      <main className="flex-1 flex flex-col overflow-hidden relative">
+      <main className="flex-1 flex flex-col overflow-hidden relative w-full">
         {/* TOPBAR */}
-        <AdminHeader activeTab={activeTab} adminUser={adminUser} />
+        <AdminHeader
+          activeTab={activeTab}
+          adminUser={adminUser}
+          onMenuClick={() => setMobileMenuOpen(true)}
+        />
 
         {/* CONTENT AREA */}
-        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar">
           {activeTab === "overview" && <AdminOverview stats={stats} recentOrders={orders?.slice(0, 8)} />}
           {activeTab === "products" && <AdminProducts products={products} categories={categories} />}
           {activeTab === "orders" && <AdminOrders orders={orders} />}

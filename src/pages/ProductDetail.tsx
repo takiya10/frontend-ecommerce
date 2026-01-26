@@ -373,7 +373,7 @@ export default function ProductDetail() {
                     onClick={handleAddToCart}
                     disabled={product.stock === 0}
                   >
-                    {product.stock === 0 ? "Out of Stock" : "Add to Cart - " + formatPrice(product.price * quantity)}
+                    {product.stock === 0 ? "Stok Habis" : "Tambah ke Keranjang - " + formatPrice(product.price * quantity)}
                   </Button>
                   <Button
                     variant="outline"

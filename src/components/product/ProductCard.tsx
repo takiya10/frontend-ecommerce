@@ -6,6 +6,7 @@ import { cn, formatPrice } from "@/lib/utils";
 import { Product } from "@/types";
 import productPlaceholder from "@/assets/product-1.jpg";
 import { useState } from "react";
+import { ProductQuickView } from "./ProductQuickView";
 
 interface ProductCardProps {
   product: Product;
@@ -14,6 +15,7 @@ interface ProductCardProps {
 
 export function ProductCard({ product, className }: ProductCardProps) {
   const [isHovered, setIsHovered] = useState(false);
+  const [showQuickView, setShowQuickView] = useState(false);
 
   // Determine image source - Robust check
   let primaryImage = productPlaceholder;
@@ -116,10 +118,10 @@ export function ProductCard({ product, className }: ProductCardProps) {
               disabled={isOutOfStock}
               onClick={(e) => {
                 e.preventDefault();
-                // Add to cart logic
+                setShowQuickView(true);
               }}
             >
-              {isOutOfStock ? "Habis" : "Tambah ke Keranjang"}
+              {isOutOfStock ? "Habis" : "Pilih Varian"}
             </Button>
           </div>
         </div>
@@ -143,6 +145,7 @@ export function ProductCard({ product, className }: ProductCardProps) {
           )}
         </div>
 
+
         {/* Colors (Optional: Only show if > 1) */}
         {product.colors && product.colors.length > 0 && (
           <div className="flex gap-1.5 pt-1">
@@ -162,6 +165,12 @@ export function ProductCard({ product, className }: ProductCardProps) {
           </div>
         )}
       </div>
+
+      <ProductQuickView
+        product={product}
+        isOpen={showQuickView}
+        onClose={() => setShowQuickView(false)}
+      />
     </article>
   );
 }

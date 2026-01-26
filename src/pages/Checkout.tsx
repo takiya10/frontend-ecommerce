@@ -25,7 +25,7 @@ export default function Checkout() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [promoCode, setPromoCode] = useState("");
   const [appliedVoucher, setAppliedVoucher] = useState<VoucherResponse | null>(null);
-  
+
   // --- Address Logic ---
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const [showGuestForm, setShowGuestForm] = useState(!isAuthenticated);
@@ -45,6 +45,8 @@ export default function Checkout() {
     city: "",
     postalCode: ""
   });
+
+  const [isSuccess, setIsSuccess] = useState(false);
 
   // Effect to sync initial state if auth changes during checkout
   useEffect(() => {
@@ -66,16 +68,16 @@ export default function Checkout() {
   const handleApplyVoucher = async () => {
     if (!promoCode.trim()) return;
     try {
-        const result = await fetcher<VoucherResponse>('/vouchers/validate', {
-            method: 'POST',
-            body: JSON.stringify({ code: promoCode, orderAmount: subtotal })
-        });
-        setAppliedVoucher(result);
-        toast.success(`Voucher ${result.code} berhasil dipasang!`);
+      const result = await fetcher<VoucherResponse>('/vouchers/validate', {
+        method: 'POST',
+        body: JSON.stringify({ code: promoCode, orderAmount: subtotal })
+      });
+      setAppliedVoucher(result);
+      toast.success(`Voucher ${result.code} berhasil dipasang!`);
     } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : "Kode promo tidak valid";
-        toast.error(message);
-        setAppliedVoucher(null);
+      const message = error instanceof Error ? error.message : "Kode promo tidak valid";
+      toast.error(message);
+      setAppliedVoucher(null);
     }
   };
 
@@ -100,63 +102,69 @@ export default function Checkout() {
     }
 
     try {
-        const order = await fetcher<Order>('/orders', {
-            method: 'POST',
-            body: JSON.stringify({
-                ...checkoutData,
-                items: !isAuthenticated || showGuestForm ? items.map(i => ({ 
-                  productId: i.productId, 
-                  quantity: i.quantity,
-                  size: i.size,
-                  color: i.color
-                })) : undefined,
-                voucherId: appliedVoucher?.voucherId
-            }) 
-        });
-        
-        const { snap_token } = await fetcher<{ snap_token: string }>(`/payments/snap-token/${order.id}`, {
-            method: 'POST'
-        });
+      const order = await fetcher<Order>('/orders', {
+        method: 'POST',
+        body: JSON.stringify({
+          ...checkoutData,
+          items: !isAuthenticated || showGuestForm ? items.map(i => ({
+            productId: i.productId,
+            quantity: i.quantity,
+            size: i.size,
+            color: i.color
+          })) : undefined,
+          voucherId: appliedVoucher?.voucherId
+        })
+      });
 
-        const snap = window.snap;
-        if (snap) {
-            snap.pay(snap_token, {
-                onSuccess: (result: unknown) => {
-                    console.log("Payment success:", result);
-                    toast.success("Pembayaran berhasil!");
-                    void clearCart();
-                    // If guest, show a guest-order-status page instead of /profile
-                    navigate(isAuthenticated ? "/profile?tab=orders" : `/order-status?id=${order.id}&email=${(checkoutData as Record<string, string>).email}`);
-                },
-                onPending: (result: unknown) => {
-                    console.log("Payment pending:", result);
-                    toast.info("Pembayaran tertunda.");
-                    void clearCart();
-                    navigate(isAuthenticated ? "/profile?tab=orders" : `/order-status?id=${order.id}&email=${(checkoutData as Record<string, string>).email}`);
-                },
-                onError: (result: unknown) => {
-                    console.error("Payment error:", result);
-                    toast.error("Pembayaran gagal.");
-                },
-                onClose: () => {
-                    toast.info("Jendela pembayaran ditutup.");
-                    void clearCart();
-                    navigate(isAuthenticated ? "/profile?tab=orders" : "/");
-                }
-            });
-        }
+      const { snap_token } = await fetcher<{ snap_token: string }>(`/payments/snap-token/${order.id}`, {
+        method: 'POST'
+      });
+
+      const snap = window.snap;
+      if (snap) {
+        snap.pay(snap_token, {
+          onSuccess: (result: unknown) => {
+            console.log("Payment success:", result);
+            toast.success("Pembayaran berhasil!");
+            void clearCart();
+            setIsSuccess(true); // Set success state
+            // If guest, show a guest-order-status page instead of /profile
+            navigate(isAuthenticated ? "/profile?tab=orders" : `/order-status?id=${order.id}&email=${(checkoutData as Record<string, string>).email}`);
+          },
+          onPending: (result: unknown) => {
+            console.log("Payment pending:", result);
+            toast.info("Pembayaran tertunda.");
+            void clearCart();
+            setIsSuccess(true); // Set success state
+            navigate(isAuthenticated ? "/profile?tab=orders" : `/order-status?id=${order.id}&email=${(checkoutData as Record<string, string>).email}`);
+          },
+          onError: (result: unknown) => {
+            console.error("Payment error:", result);
+            toast.error("Pembayaran gagal.");
+          },
+          onClose: () => {
+            toast.info("Jendela pembayaran ditutup.");
+            void clearCart();
+            navigate(isAuthenticated ? "/profile?tab=orders" : "/");
+          }
+        });
+      }
     } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : "Gagal membuat pesanan";
-        toast.error(message);
+      const message = error instanceof Error ? error.message : "Gagal membuat pesanan";
+      toast.error(message);
     } finally {
-        setIsProcessing(false);
+      setIsProcessing(false);
     }
   };
 
-  if (items.length === 0) {
-    navigate("/cart");
-    return null;
-  }
+  // Use effect for empty cart redirect to avoid render loop
+  useEffect(() => {
+    if (items.length === 0 && !isProcessing && !isSuccess) {
+      navigate("/cart");
+    }
+  }, [items.length, isProcessing, isSuccess, navigate]);
+
+  if (items.length === 0 && !isSuccess) return null;
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -164,8 +172,8 @@ export default function Checkout() {
 
       <main className="flex-1 py-8 lg:py-12">
         <div className="container mx-auto px-4">
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             className="mb-6 pl-0 hover:pl-2 transition-all"
             onClick={() => navigate("/cart")}
           >
@@ -201,7 +209,7 @@ export default function Checkout() {
                   {isAuthenticated && !showGuestForm && addresses && addresses.length > 0 ? (
                     <div className="grid gap-3">
                       {addresses.map((addr) => (
-                        <div 
+                        <div
                           key={addr.id}
                           onClick={() => setSelectedAddressId(addr.id)}
                           className={cn(
@@ -233,7 +241,7 @@ export default function Checkout() {
                           <Input id="lastName" required placeholder="Nama belakang" value={formData.lastName} onChange={handleInputChange} />
                         </div>
                       </div>
-                      
+
                       <div className="space-y-2">
                         <Label htmlFor="email">Email Konfirmasi</Label>
                         <Input id="email" type="email" required placeholder="email@anda.com" value={formData.email} onChange={handleInputChange} />
@@ -280,7 +288,7 @@ export default function Checkout() {
             <div className="lg:pl-8">
               <div className="bg-card rounded-lg border border-border p-6 sticky top-24 shadow-sm">
                 <h2 className="font-serif text-xl mb-6">Ringkasan Pesanan</h2>
-                
+
                 <div className="space-y-4 mb-6 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
                   {items.map((item) => (
                     <div key={`${item.productId}-${item.size}-${item.color}`} className="flex gap-4">
@@ -306,26 +314,26 @@ export default function Checkout() {
                     <span className="text-muted-foreground">Subtotal</span>
                     <span>{formatPrice(subtotal)}</span>
                   </div>
-                  
+
                   <div className="flex gap-2 py-2">
-                    <Input 
-                        placeholder="Kode promo?" 
-                        value={promoCode}
-                        onChange={(e) => setPromoCode(e.target.value)}
-                        className="h-9 text-xs"
-                        disabled={!!appliedVoucher}
+                    <Input
+                      placeholder="Kode promo?"
+                      value={promoCode}
+                      onChange={(e) => setPromoCode(e.target.value)}
+                      className="h-9 text-xs"
+                      disabled={!!appliedVoucher}
                     />
                     {appliedVoucher ? (
-                        <Button variant="outline" size="sm" className="h-9 text-xs" onClick={() => {setAppliedVoucher(null); setPromoCode("");}}>Hapus</Button>
+                      <Button variant="outline" size="sm" className="h-9 text-xs" onClick={() => { setAppliedVoucher(null); setPromoCode(""); }}>Hapus</Button>
                     ) : (
-                        <Button variant="outline" size="sm" className="h-9 text-xs" onClick={handleApplyVoucher}>Pasang</Button>
+                      <Button variant="outline" size="sm" className="h-9 text-xs" onClick={handleApplyVoucher}>Pasang</Button>
                     )}
                   </div>
 
                   {appliedVoucher && (
                     <div className="flex justify-between text-sm text-green-600 font-medium">
-                        <span>Diskon ({appliedVoucher.code})</span>
-                        <span>-{formatPrice(appliedVoucher.discountAmount)}</span>
+                      <span>Diskon ({appliedVoucher.code})</span>
+                      <span>-{formatPrice(appliedVoucher.discountAmount)}</span>
                     </div>
                   )}
 
@@ -339,10 +347,10 @@ export default function Checkout() {
                   </div>
                 </div>
 
-                <Button 
-                  type="submit" 
+                <Button
+                  type="submit"
                   form="checkout-form"
-                  className="w-full mt-8 py-7 text-base font-bold shadow-lg shadow-primary/20" 
+                  className="w-full mt-8 py-7 text-base font-bold shadow-lg shadow-primary/20"
                   disabled={isProcessing || (!showGuestForm && !selectedAddressId)}
                 >
                   {isProcessing ? (

@@ -49,6 +49,7 @@ export interface Product {
   category?: Category;
   images?: ProductImage[];
   variants?: ProductVariant[];
+  material?: string;
   createdAt?: string;
   updatedAt?: string;
 

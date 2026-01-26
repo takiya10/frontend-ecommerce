@@ -1,17 +1,21 @@
-import { ChevronRight, Eye } from "lucide-react";
+import { ChevronRight, Eye, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface AdminHeaderProps {
     activeTab: string;
     adminUser: any;
+    onMenuClick: () => void;
 }
 
-export function AdminHeader({ activeTab, adminUser }: AdminHeaderProps) {
+export function AdminHeader({ activeTab, adminUser, onMenuClick }: AdminHeaderProps) {
     return (
-        <header className="h-16 border-b border-border/40 bg-card/50 backdrop-blur-sm sticky top-0 z-40 flex items-center justify-between px-8 transition-all">
+        <header className="h-16 border-b border-border/40 bg-card/50 backdrop-blur-sm sticky top-0 z-40 flex items-center justify-between px-4 md:px-8 transition-all">
             <div className="flex items-center gap-2 text-muted-foreground">
-                <span className="text-xs uppercase tracking-widest font-bold opacity-60">Portal</span>
-                <ChevronRight className="h-3 w-3 opacity-40" />
+                <Button variant="ghost" size="icon" className="lg:hidden mr-2 -ml-2" onClick={onMenuClick}>
+                    <Menu className="h-5 w-5" />
+                </Button>
+                <span className="text-xs uppercase tracking-widest font-bold opacity-60 hidden md:inline">Portal</span>
+                <ChevronRight className="h-3 w-3 opacity-40 hidden md:inline" />
                 <span className="text-xs uppercase tracking-widest font-bold text-foreground">{activeTab}</span>
             </div>
 

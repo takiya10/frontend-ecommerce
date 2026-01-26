@@ -32,7 +32,10 @@ interface NavItemProps {
 
 const NavItem = ({ value, label, icon: Icon, isOpen, activeTab, setActiveTab }: NavItemProps) => (
     <button
-        onClick={() => setActiveTab(value)}
+        onClick={() => {
+            setActiveTab(value);
+            // On mobile we might want to close sidebar here, but we'll let parent handle via separate wrapper
+        }}
         className={cn(
             "flex items-center w-full px-4 py-3 text-sm font-medium transition-all duration-200 rounded-lg group",
             activeTab === value
@@ -45,24 +48,26 @@ const NavItem = ({ value, label, icon: Icon, isOpen, activeTab, setActiveTab }: 
     </button>
 );
 
-export function AdminSidebar({ isOpen, setIsOpen, activeTab, setActiveTab, logout }: AdminSidebarProps) {
+// Reusable Navigation Content
+export function AdminNav({ isOpen, activeTab, setActiveTab, logout }: {
+    isOpen: boolean;
+    activeTab: string;
+    setActiveTab: (tab: string) => void;
+    logout: (redir: boolean) => void;
+}) {
     const navigate = useNavigate();
 
     return (
-        <aside className={cn(
-            "bg-[#0F172A] text-white border-r border-white/5 transition-all duration-300 flex flex-col z-50 sticky top-0 h-screen shadow-2xl",
-            isOpen ? "w-72" : "w-20"
-        )}>
+        <div className="flex flex-col h-full w-full">
             <div className="p-6 flex items-center justify-between border-b border-white/10">
-                {isOpen && (
+                {isOpen ? (
                     <div className="flex flex-col animate-fade-in">
                         <span className="font-serif text-2xl font-bold tracking-tighter text-white">Byher</span>
                         <span className="text-[10px] uppercase tracking-[0.3em] text-white/50 font-bold">Management</span>
                     </div>
+                ) : (
+                    <div className="mx-auto font-serif text-xl font-bold text-white">B</div>
                 )}
-                <Button variant="ghost" size="icon" onClick={() => setIsOpen(!isOpen)} className="ml-auto text-white/70 hover:bg-white/10 hover:text-white">
-                    {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-                </Button>
             </div>
 
             <nav className="flex-1 px-4 space-y-2 mt-6 overflow-y-auto custom-scrollbar">
@@ -92,6 +97,29 @@ export function AdminSidebar({ isOpen, setIsOpen, activeTab, setActiveTab, logou
                     {isOpen && "Sign Out"}
                 </Button>
             </div>
+        </div>
+    );
+}
+
+// Desktop Sidebar Wrapper
+export function AdminSidebar({ isOpen, setIsOpen, activeTab, setActiveTab, logout }: AdminSidebarProps) {
+    return (
+        <aside className={cn(
+            "bg-[#0F172A] text-white border-r border-white/5 transition-all duration-300 flex-col z-50 sticky top-0 h-screen shadow-2xl hidden lg:flex",
+            isOpen ? "w-72" : "w-20"
+        )}>
+            <div className="absolute right-[-12px] top-6 z-50">
+                <Button
+                    variant="secondary"
+                    size="icon"
+                    onClick={() => setIsOpen(!isOpen)}
+                    className="h-6 w-6 rounded-full shadow-md border border-slate-200"
+                >
+                    {isOpen ? <X className="h-3 w-3" /> : <Menu className="h-3 w-3" />}
+                </Button>
+            </div>
+
+            <AdminNav isOpen={isOpen} activeTab={activeTab} setActiveTab={setActiveTab} logout={logout} />
         </aside>
     );
 }

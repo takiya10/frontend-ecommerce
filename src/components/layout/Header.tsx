@@ -1,4 +1,5 @@
-import { ShoppingBag, Search, User, Menu, X, Heart, ChevronRight, Calculator, Calendar, CreditCard, Settings, Smile, LogOut, Loader2, LayoutDashboard, TrendingUp } from "lucide-react";
+
+import { ShoppingBag, Search, Menu, X, User, Heart, Settings, LogOut, ChevronRight, Loader2, Calendar, TrendingUp, LayoutDashboard } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -47,6 +48,10 @@ export function Header() {
   const [openSearch, setOpenSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [searchHistory, setSearchHistory] = useState<string[]>(() => {
+    const saved = localStorage.getItem("search_history");
+    return saved ? JSON.parse(saved) : [];
+  });
   const navigate = useNavigate();
 
   // Real-time Notification Simulation for Admin
@@ -78,7 +83,7 @@ export function Header() {
   // Fetch search results
   const { data: searchResults, isLoading: isSearching } = useQuery({
     queryKey: ['search', debouncedSearch],
-    queryFn: () => fetcher<Product[]>(`/products?search=${debouncedSearch}`),
+    queryFn: () => fetcher<Product[]>(`/ products ? search = ${debouncedSearch} `),
     enabled: debouncedSearch.length > 0,
   });
 
@@ -114,6 +119,26 @@ export function Header() {
     navigate("/login");
   };
 
+  const handleSearchSubmit = (query: string) => {
+    if (!query.trim()) return;
+
+    // Save to history
+    const updatedHistory = [
+      query.trim(),
+      ...searchHistory.filter((h) => h !== query.trim())
+    ].slice(0, 5);
+
+    setSearchHistory(updatedHistory);
+    localStorage.setItem("search_history", JSON.stringify(updatedHistory));
+
+    runCommand(() => navigate(`/ search ? q = ${encodeURIComponent(query.trim())} `));
+  };
+
+  const clearHistory = () => {
+    setSearchHistory([]);
+    localStorage.removeItem("search_history");
+  };
+
   return (
     <header className="sticky top-0 z-50">
       {/* Announcement Bar */}
@@ -146,9 +171,9 @@ export function Header() {
             </Link>
 
             <div className="flex items-center gap-2">
-              <Button 
-                variant="icon" 
-                size="icon" 
+              <Button
+                variant="icon"
+                size="icon"
                 className="text-nav-foreground"
                 onClick={() => setOpenSearch(true)}
               >
@@ -189,9 +214,9 @@ export function Header() {
                   Admin Mode
                 </Badge>
               )}
-              <Button 
-                variant="icon" 
-                size="icon" 
+              <Button
+                variant="icon"
+                size="icon"
                 className="text-nav-foreground"
                 onClick={() => setOpenSearch(true)}
               >
@@ -233,6 +258,10 @@ export function Header() {
                       <User className="mr-2 h-4 w-4" />
                       Profile
                     </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate("/settings")} className="cursor-pointer">
+                      <Settings className="mr-2 h-4 w-4" />
+                      <span>Settings</span>
+                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => navigate("/profile?tab=orders")}>
                       <ShoppingBag className="mr-2 h-4 w-4" />
                       Pesanan Saya
@@ -242,8 +271,8 @@ export function Header() {
                       Daftar Alamat
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem 
-                      className="text-destructive focus:text-destructive" 
+                    <DropdownMenuItem
+                      className="text-destructive focus:text-destructive"
                       onClick={() => {
                         logout(isAdminAuthenticated);
                         navigate("/");
@@ -255,9 +284,9 @@ export function Header() {
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
-                <Button 
-                  variant="icon" 
-                  size="icon" 
+                <Button
+                  variant="icon"
+                  size="icon"
                   className="text-nav-foreground"
                   onClick={() => navigate("/login")}
                 >
@@ -292,36 +321,87 @@ export function Header() {
 
       {/* Search Command Dialog */}
       <CommandDialog open={openSearch} onOpenChange={setOpenSearch} shouldFilter={false}>
-        <CommandInput 
-          placeholder="Cari produk (misal: dress, taupe)..." 
+        <CommandInput
+          placeholder="Cari produk (misal: dress, taupe)..."
           value={searchQuery}
           onValueChange={setSearchQuery}
         />
         <CommandList>
           <CommandEmpty>
             {isSearching ? (
-               <div className="flex items-center justify-center py-4">
-                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-               </div>
+              <div className="flex items-center justify-center py-4">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
             ) : (
-               "Produk tidak ditemukan."
+              <div className="py-6 text-center space-y-3">
+                <p className="text-sm">Produk tidak ditemukan.</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleSearchSubmit(searchQuery)}
+                >
+                  Cari "{searchQuery}" di semua produk
+                </Button>
+              </div>
             )}
           </CommandEmpty>
-          
+
+          {searchQuery.length > 0 && (
+            <CommandGroup heading="Aksi">
+              <CommandItem
+                onSelect={() => handleSearchSubmit(searchQuery)}
+                className="cursor-pointer"
+              >
+                <Search className="mr-2 h-4 w-4" />
+                <span>Cari "{searchQuery}"</span>
+              </CommandItem>
+            </CommandGroup>
+          )}
+
+          {searchQuery.length === 0 && searchHistory.length > 0 && (
+            <CommandGroup
+              heading={
+                <div className="flex items-center justify-between w-full pr-2">
+                  <span>Pencarian Terakhir</span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      clearHistory();
+                    }}
+                    className="text-[10px] text-muted-foreground hover:text-destructive underline uppercase tracking-tighter"
+                  >
+                    Hapus
+                  </button>
+                </div>
+              }
+            >
+              {searchHistory.map((item) => (
+                <CommandItem
+                  key={item}
+                  onSelect={() => handleSearchSubmit(item)}
+                  className="cursor-pointer"
+                >
+                  <Search className="mr-2 h-4 w-4 text-muted-foreground/50" />
+                  <span>{item}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          )}
+
           {searchResults && searchResults.length > 0 && (
             <CommandGroup heading="Produk">
               {searchResults.map((product) => (
-                <div 
+                <div
                   key={product.id}
                   onClick={() => {
                     console.log("Header Search: Clicked product", product.slug);
-                    runCommand(() => navigate(`/products/${product.slug}`));
+                    runCommand(() => navigate(`/ products / ${product.slug} `));
                   }}
                   className="flex items-center gap-3 p-2 cursor-pointer hover:bg-accent rounded-sm transition-colors"
                 >
-                  <img 
-                    src={product.images?.[0]?.url || product1} 
-                    alt={product.name} 
+                  <img
+                    src={product.images?.[0]?.url || product1}
+                    alt={product.name}
                     className="w-10 h-12 object-cover rounded shadow-sm"
                   />
                   <div className="flex flex-col">
@@ -404,60 +484,60 @@ export function Header() {
                   </span>
                 )}
               </Link>
-              
-            {(isAuthenticated || isAdminAuthenticated) ? (
-              <div className="space-y-4 pt-4 border-t">
-                <div className="px-4">
-                  <p className="text-sm font-medium">{isAdminAuthenticated ? adminUser?.name : user?.name}</p>
-                  <p className="text-xs text-muted-foreground">{isAdminAuthenticated ? adminUser?.email : user?.email}</p>
-                </div>
-                {isAdminAuthenticated && (
+
+              {(isAuthenticated || isAdminAuthenticated) ? (
+                <div className="space-y-4 pt-4 border-t">
+                  <div className="px-4">
+                    <p className="text-sm font-medium">{isAdminAuthenticated ? adminUser?.name : user?.name}</p>
+                    <p className="text-xs text-muted-foreground">{isAdminAuthenticated ? adminUser?.email : user?.email}</p>
+                  </div>
+                  {isAdminAuthenticated && (
+                    <Link
+                      to="/byher-internal-mgmt"
+                      className="flex items-center gap-3 px-4 py-2 text-sm font-medium text-primary"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      <LayoutDashboard className="h-4 w-4" />
+                      Admin Dashboard
+                    </Link>
+                  )}
                   <Link
-                    to="/byher-internal-mgmt"
-                    className="flex items-center gap-3 px-4 py-2 text-sm font-medium text-primary"
+                    to="/profile"
+                    className="flex items-center gap-3 px-4 py-2 text-sm font-medium"
                     onClick={() => setMobileMenuOpen(false)}
                   >
-                    <LayoutDashboard className="h-4 w-4" />
-                    Admin Dashboard
+                    <User className="h-4 w-4" />
+                    Profile
                   </Link>
-                )}
-                <Link
-                  to="/profile"
-                  className="flex items-center gap-3 px-4 py-2 text-sm font-medium"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  <User className="h-4 w-4" />
-                  Profile
-                </Link>
-                <Link
-                  to="/profile?tab=orders"
-                  className="flex items-center gap-3 px-4 py-2 text-sm font-medium"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  <ShoppingBag className="h-4 w-4" />
-                  Pesanan Saya
-                </Link>
-                <Link
-                  to="/profile?tab=addresses"
-                  className="flex items-center gap-3 px-4 py-2 text-sm font-medium"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  <Settings className="h-4 w-4" />
-                  Daftar Alamat
-                </Link>
-                <button
-                  onClick={() => {
-                    logout(isAdminAuthenticated);
-                    setMobileMenuOpen(false);
-                    navigate("/");
-                  }}
-                  className="flex items-center gap-3 px-4 py-2 text-sm font-medium text-destructive w-full text-left"
-                >
-                  <LogOut className="h-4 w-4" />
-                  Log out
-                </button>
-              </div>
-            ) : (
+                  <Link
+                    to="/profile?tab=orders"
+                    className="flex items-center gap-3 px-4 py-2 text-sm font-medium"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <ShoppingBag className="h-4 w-4" />
+                    Pesanan Saya
+                  </Link>
+                  <Link
+                    to="/profile?tab=addresses"
+                    className="flex items-center gap-3 px-4 py-2 text-sm font-medium"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <Settings className="h-4 w-4" />
+                    Daftar Alamat
+                  </Link>
+                  <button
+                    onClick={() => {
+                      logout(isAdminAuthenticated);
+                      setMobileMenuOpen(false);
+                      navigate("/");
+                    }}
+                    className="flex items-center gap-3 px-4 py-2 text-sm font-medium text-destructive w-full text-left"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Log out
+                  </button>
+                </div>
+              ) : (
                 <Link
                   to="/login"
                   className="flex items-center py-3 px-4 text-foreground font-medium hover:bg-accent rounded-md transition-colors"
